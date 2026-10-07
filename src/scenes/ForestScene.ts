@@ -54,9 +54,6 @@ export class ForestScene extends Phaser.Scene {
     // Spawn Companions
     this.spawnCompanions();
 
-    // Spawn Monsters & Resource Nodes for current area
-    this.spawnAreaContents();
-
     // Camera follow
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.setBounds(0, 0, width, height);
@@ -67,6 +64,9 @@ export class ForestScene extends Phaser.Scene {
 
     // Create HUD
     this.createHUD();
+
+    // Spawn Monsters & Resource Nodes for current area
+    this.spawnAreaContents();
 
     // Key input for harvesting
     this.input.keyboard?.on('keydown-E', () => {

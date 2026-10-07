@@ -24,6 +24,9 @@ export class Companion extends Phaser.Physics.Arcade.Sprite {
     this.setDepth(9);
   }
 
+  private walkTween: Phaser.Tweens.Tween | null = null;
+  private attackTween: Phaser.Tweens.Tween | null = null;
+
   public update(time: number, nearbyMonsters: Monster[]): void {
     if (!this.body || this.companionData.hp <= 0) {
       this.setVelocity(0, 0);
@@ -72,6 +75,28 @@ export class Companion extends Phaser.Physics.Arcade.Sprite {
       this.aiState = 'idle';
       this.setVelocity(0, 0);
     }
+
+    // Handle walk tween
+    const isMoving = this.body.velocity.x !== 0 || this.body.velocity.y !== 0;
+    const isAttacking = this.attackTween && this.attackTween.isPlaying();
+
+    if (isMoving && !isAttacking) {
+      if (!this.walkTween || !this.walkTween.isPlaying()) {
+        this.walkTween = this.scene.tweens.add({
+          targets: this,
+          angle: { from: -10, to: 10 },
+          duration: 150,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
+      }
+    } else {
+      if (this.walkTween && this.walkTween.isPlaying()) {
+        this.walkTween.stop();
+        this.angle = 0;
+      }
+    }
   }
 
   private handleFollowState(): void {
@@ -103,6 +128,22 @@ export class Companion extends Phaser.Physics.Arcade.Sprite {
 
   private executeAttack(monster: Monster): void {
     const angle = Phaser.Math.Angle.Between(this.x, this.y, monster.x, monster.y);
+    
+    // Stop walk tween if any
+    if (this.walkTween && this.walkTween.isPlaying()) {
+      this.walkTween.stop();
+      this.angle = 0;
+    }
+
+    // Lunge tween
+    this.attackTween = this.scene.tweens.add({
+      targets: this,
+      x: this.x + Math.cos(angle) * 15,
+      y: this.y + Math.sin(angle) * 15,
+      duration: 100,
+      yoyo: true,
+      ease: 'Power2'
+    });
     
     if (this.companionData.classType === 'mage') {
       this.scene.events.emit('companion-fire-projectile', {

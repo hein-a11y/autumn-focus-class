@@ -21,6 +21,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private activeKeys: Set<string> = new Set();
   private pointerIsDragging: boolean = false;
 
+  private walkTween: Phaser.Tweens.Tween | null = null;
+  private attackTween: Phaser.Tweens.Tween | null = null;
+
   constructor(scene: Phaser.Scene, x: number, y: number) {
     const gs = GameState.getInstance();
     super(scene, x, y, `char_${gs.player.classType}_${gs.player.gender}`);
@@ -163,6 +166,26 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     this.setVelocity(vx, vy);
 
+    const isMoving = vx !== 0 || vy !== 0;
+
+    if (isMoving && !this.isAttacking) {
+      if (!this.walkTween || !this.walkTween.isPlaying()) {
+        this.walkTween = this.scene.tweens.add({
+          targets: this,
+          angle: { from: -10, to: 10 },
+          duration: 150,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
+      }
+    } else {
+      if (this.walkTween && this.walkTween.isPlaying()) {
+        this.walkTween.stop();
+        this.angle = 0;
+      }
+    }
+
     // Attack input
     const attackPressed =
       this.activeKeys.has('Space') ||
@@ -206,25 +229,54 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     let offsetX = 0;
     let offsetY = 0;
     let angle = 0;
+    
+    this.isAttacking = true;
+    
+    // Stop walk tween if any
+    if (this.walkTween && this.walkTween.isPlaying()) {
+      this.walkTween.stop();
+      this.angle = 0;
+    }
+
+    let lungeX = 0;
+    let lungeY = 0;
+    const lungeDist = 15;
 
     switch (this.facing) {
       case 'right':
         offsetX = 28;
         angle = 0;
+        lungeX = lungeDist;
         break;
       case 'left':
         offsetX = -28;
         angle = 180;
+        lungeX = -lungeDist;
         break;
       case 'up':
         offsetY = -28;
         angle = -90;
+        lungeY = -lungeDist;
         break;
       case 'down':
         offsetY = 28;
         angle = 90;
+        lungeY = lungeDist;
         break;
     }
+    
+    // Lunge tween
+    this.attackTween = this.scene.tweens.add({
+      targets: this,
+      x: this.x + lungeX,
+      y: this.y + lungeY,
+      duration: 100,
+      yoyo: true,
+      ease: 'Power2',
+      onComplete: () => {
+        this.isAttacking = false;
+      }
+    });
 
     const attackX = this.x + offsetX;
     const attackY = this.y + offsetY;

@@ -102,19 +102,16 @@ export class VillageScene extends Phaser.Scene {
       .setScale(0.15).setDepth(2);
     this.physics.add.existing(homeHouse, true);
     (homeHouse.body as Phaser.Physics.Arcade.StaticBody).setSize(150, 150);
-    this.physics.add.collider(this.player, homeHouse);
+    
+    // Make house a portal instead of a solid wall
+    this.physics.add.overlap(this.player, homeHouse, () => {
+      this.scene.start('HomeScene');
+    });
 
-    this.add.text(408, 30, '【主人公の自宅】', {
-      fontSize: '14px',
+    this.add.text(408, 30, '【主人公の自宅】\n(入る)', {
+      fontSize: '12px',
       color: '#ffeb3b',
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(3);
-
-    // Bed in home area
-    const bed = this.add.image(408, 140, 'furniture_bed').setDepth(3);
-    this.add.text(408, 162, '[E] 休む (全回復&セーブ)', {
-      fontSize: '11px',
-      color: '#81c784',
+      align: 'center',
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(3);
 
@@ -278,14 +275,6 @@ export class VillageScene extends Phaser.Scene {
     const px = this.player.x;
     const py = this.player.y;
 
-    // Bed interaction range
-    if (Phaser.Math.Distance.Between(px, py, 408, 140) < 50) {
-      this.interactPromptText.setText('[E] ベッドで休む (全回復&セーブ)');
-      this.interactPromptText.setPosition(408, 185);
-      this.interactPromptText.setVisible(true);
-      return;
-    }
-
     // Quest Board interaction range
     if (Phaser.Math.Distance.Between(px, py, 350, 500) < 50) {
       this.interactPromptText.setText('[E] クエスト掲示板を見る');
@@ -309,49 +298,11 @@ export class VillageScene extends Phaser.Scene {
     const px = this.player.x;
     const py = this.player.y;
 
-    if (Phaser.Math.Distance.Between(px, py, 408, 140) < 50) {
-      this.openBedRestModal();
-    } else if (Phaser.Math.Distance.Between(px, py, 350, 500) < 50) {
+    if (Phaser.Math.Distance.Between(px, py, 350, 500) < 50) {
       this.openQuestBoardModal();
     } else if (Phaser.Math.Distance.Between(px, py, 470, 500) < 50) {
       this.openBotRecruitmentModal();
     }
-  }
-
-  private openBedRestModal(): void {
-    this.closeModal();
-
-    this.gameState.healAll();
-    this.gameState.saveToStorage();
-
-    const container = this.add.container(400, 300).setScrollFactor(0).setDepth(200);
-    const bg = this.add.rectangle(0, 0, 360, 160, 0x1a2332, 0.95)
-      .setStrokeStyle(2, 0x4caf50);
-
-    const title = this.add.text(0, -45, 'ベッドで休んで全回復しました！', {
-      fontSize: '16px',
-      color: '#81c784',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    const desc = this.add.text(0, -10, 'HPとMPが最大まで回復し、\nゲームの進行状況がセーブされました。', {
-      fontSize: '13px',
-      color: '#ffffff',
-      align: 'center',
-      lineSpacing: 4
-    }).setOrigin(0.5);
-
-    const closeBtn = this.add.rectangle(0, 45, 120, 32, 0x388e3c)
-      .setInteractive({ useHandCursor: true });
-    const closeBtnText = this.add.text(0, 45, '閉じる [E]', {
-      fontSize: '13px',
-      color: '#ffffff',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    closeBtn.on('pointerdown', () => this.closeModal());
-    container.add([bg, title, desc, closeBtn, closeBtnText]);
-    this.activeModal = container;
   }
 
   private openQuestBoardModal(): void {

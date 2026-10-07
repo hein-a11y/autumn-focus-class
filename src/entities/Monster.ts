@@ -9,6 +9,8 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
   private patrolDirection: { x: number; y: number } = { x: 0, y: 0 };
   private isDead: boolean = false;
   private hpBar?: Phaser.GameObjects.Graphics;
+  private walkTween: Phaser.Tweens.Tween | null = null;
+  private isAggroed: boolean = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, def: MonsterDefinition) {
     super(scene, x, y, `monster_${def.id}`);
@@ -45,7 +47,7 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
     const dist = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
     const aggroRange = this.monsterDef.isBoss ? 260 : 140;
 
-    if (dist <= aggroRange) {
+    if (this.isAggroed || dist <= aggroRange) {
       // Chase target
       const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
       this.setVelocity(
@@ -60,6 +62,27 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
       }
     } else {
       this.handlePatrol(time);
+    }
+
+    // Handle walk tween
+    const isMoving = this.body.velocity.x !== 0 || this.body.velocity.y !== 0;
+
+    if (isMoving) {
+      if (!this.walkTween || !this.walkTween.isPlaying()) {
+        this.walkTween = this.scene.tweens.add({
+          targets: this,
+          angle: { from: -8, to: 8 },
+          duration: 180,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
+      }
+    } else {
+      if (this.walkTween && this.walkTween.isPlaying()) {
+        this.walkTween.stop();
+        this.angle = 0;
+      }
     }
   }
 
@@ -107,6 +130,8 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
 
   public takeDamage(amount: number, knockbackAngle?: number): void {
     if (this.isDead) return;
+
+    this.isAggroed = true;
 
     const damage = Math.max(1, Math.round(amount - this.monsterDef.defense / 2));
     this.currentHp = Math.max(0, this.currentHp - damage);

@@ -49,14 +49,14 @@ export class DungeonScene extends Phaser.Scene {
     this.createDungeonMap(width, height);
     this.spawnCompanions();
 
-    this.spawnFloorContents();
-
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.setBounds(0, 0, width, height);
     this.physics.world.setBounds(0, 0, width, height);
 
     this.setupCombatEvents();
     this.createHUD();
+
+    this.spawnFloorContents();
 
     this.input.keyboard?.on('keydown-E', () => {
       this.checkMining();
