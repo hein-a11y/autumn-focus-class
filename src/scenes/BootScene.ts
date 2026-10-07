@@ -19,6 +19,12 @@ export class BootScene extends Phaser.Scene {
     this.load.on('progress', (value: number) => {
       loadingText.setText(`読み込み中... ${Math.round(value * 100)}%`);
     });
+
+    // Load AI-generated building assets (now as PNGs with transparent backgrounds)
+    this.load.image('home_building', 'assets/generated/home.png');
+    this.load.image('tavern_building', 'assets/generated/tavern.png');
+    this.load.image('forest_portal', 'assets/generated/forest.png');
+    this.load.image('dungeon_portal', 'assets/generated/dungeon.png');
   }
 
   public create(): void {

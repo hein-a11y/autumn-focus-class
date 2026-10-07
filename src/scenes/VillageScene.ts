@@ -27,11 +27,11 @@ export class VillageScene extends Phaser.Scene {
     const width = 800;
     const height = 600;
 
+    // Spawn Player in central village square first so physics overlaps can reference it
+    this.player = new Player(this, 400, 320);
+
     // Create Village Tilemap / Grounds
     this.createVillageLayout();
-
-    // Spawn Player in central village square
-    this.player = new Player(this, 400, 320);
 
     // Spawn recruited companions
     this.spawnCompanions();
@@ -98,11 +98,13 @@ export class VillageScene extends Phaser.Scene {
     }
 
     // --- Home (North) ---
-    const homeHouse = this.add.rectangle(408, 120, 160, 100, 0x5d4037)
-      .setStrokeStyle(3, 0x3e2723).setDepth(2);
+    const homeHouse = this.add.image(408, 120, 'home_building')
+      .setScale(0.15).setDepth(2);
     this.physics.add.existing(homeHouse, true);
+    (homeHouse.body as Phaser.Physics.Arcade.StaticBody).setSize(150, 150);
+    this.physics.add.collider(this.player, homeHouse);
 
-    this.add.text(408, 90, '【主人公の自宅】', {
+    this.add.text(408, 30, '【主人公の自宅】', {
       fontSize: '14px',
       color: '#ffeb3b',
       fontStyle: 'bold'
@@ -117,11 +119,13 @@ export class VillageScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(3);
 
     // --- Tavern (South) ---
-    const tavern = this.add.rectangle(408, 490, 220, 110, 0x4e342e)
-      .setStrokeStyle(3, 0x3e2723).setDepth(2);
+    const tavern = this.add.image(408, 490, 'tavern_building')
+      .setScale(0.15).setDepth(2);
     this.physics.add.existing(tavern, true);
+    (tavern.body as Phaser.Physics.Arcade.StaticBody).setSize(150, 150);
+    this.physics.add.collider(this.player, tavern);
 
-    this.add.text(408, 450, '【村の酒場】', {
+    this.add.text(408, 390, '【村の酒場】', {
       fontSize: '14px',
       color: '#ffcc00',
       fontStyle: 'bold'
@@ -150,10 +154,11 @@ export class VillageScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(3);
 
     // --- Forest Entrance (West) ---
-    const forestPortal = this.add.rectangle(40, 328, 60, 90, 0x2e7d32, 0.8)
-      .setStrokeStyle(2, 0x81c784).setDepth(2);
+    const forestPortal = this.add.image(50, 328, 'forest_portal')
+      .setScale(0.12).setDepth(2);
     this.physics.add.existing(forestPortal, true);
-    this.add.text(40, 328, '始まりの森\n◀ 出発', {
+    (forestPortal.body as Phaser.Physics.Arcade.StaticBody).setSize(120, 120);
+    this.add.text(50, 250, '始まりの森\n◀ 出発', {
       fontSize: '12px',
       color: '#ffffff',
       align: 'center',
@@ -161,10 +166,11 @@ export class VillageScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(3);
 
     // --- Dungeon Entrance (East) ---
-    const dungeonPortal = this.add.rectangle(760, 328, 60, 90, 0x37474f, 0.8)
-      .setStrokeStyle(2, 0x90a4ae).setDepth(2);
+    const dungeonPortal = this.add.image(750, 328, 'dungeon_portal')
+      .setScale(0.12).setDepth(2);
     this.physics.add.existing(dungeonPortal, true);
-    this.add.text(760, 328, '最前線\nダンジョン\n出発 ▶', {
+    (dungeonPortal.body as Phaser.Physics.Arcade.StaticBody).setSize(120, 120);
+    this.add.text(750, 250, '最前線\nダンジョン\n出発 ▶', {
       fontSize: '11px',
       color: '#ffffff',
       align: 'center',

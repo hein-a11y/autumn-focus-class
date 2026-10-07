@@ -42,14 +42,14 @@ export class ForestScene extends Phaser.Scene {
 
     this.currentArea = this.gameState.unlockedForestArea;
 
-    // Create Forest Environment
-    this.createForestMap(width, height);
-
     // Projectile physics group
     this.projectiles = this.physics.add.group();
 
     // Spawn Player
     this.player = new Player(this, 100, height / 2);
+
+    // Create Forest Environment
+    this.createForestMap(width, height);
 
     // Spawn Companions
     this.spawnCompanions();
