@@ -42,11 +42,11 @@ export class DungeonScene extends Phaser.Scene {
 
     this.currentFloor = Math.min(this.gameState.unlockedDungeonFloor, 1);
 
-    this.createDungeonMap(width, height);
-
     this.projectiles = this.physics.add.group();
 
     this.player = new Player(this, 100, height / 2);
+
+    this.createDungeonMap(width, height);
     this.spawnCompanions();
 
     this.spawnFloorContents();
