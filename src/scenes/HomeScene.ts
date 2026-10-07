@@ -84,8 +84,8 @@ export class HomeScene extends Phaser.Scene {
     // Rug in the middle
     this.add.rectangle(200, 200, 100, 80, 0x8d6e63).setDepth(1);
 
-    // The Bed
-    const bed = this.add.image(200, 100, 'furniture_bed').setScale(1.5).setDepth(2);
+    // The Bed (using our newly generated texture atlas!)
+    const bed = this.add.image(200, 100, 'furniture_pack', 'furniture_14').setDepth(2);
     this.physics.add.existing(bed, true);
     this.physics.add.collider(this.player, bed);
 
