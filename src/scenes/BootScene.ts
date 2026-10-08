@@ -26,6 +26,12 @@ export class BootScene extends Phaser.Scene {
     this.load.image('forest_portal', 'assets/generated/forest.png');
     this.load.image('dungeon_portal', 'assets/generated/dungeon.png');
 
+    // Load Boss Sprites
+    this.load.spritesheet('monster_giant_spider', 'assets/arachne-1.2/PNG/48x64/arachne-NESW.png', {
+      frameWidth: 48,
+      frameHeight: 64
+    });
+
     // Load Furniture Atlas
     this.load.atlas('furniture_pack', 'assets/furniture/furniture.png', 'assets/furniture/furniture.json');
   }

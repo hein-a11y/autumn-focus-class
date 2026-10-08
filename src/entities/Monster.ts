@@ -17,6 +17,10 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
     this.monsterDef = def;
     this.currentHp = def.maxHp;
 
+    if (def.id === 'giant_spider') {
+      this.setFrame(7); // Face south (Row 2, Frame 1)
+    }
+
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
