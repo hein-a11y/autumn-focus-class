@@ -291,13 +291,13 @@ export class VillageScene extends Phaser.Scene {
     }).setScrollFactor(0).setDepth(101);
 
     // Quest tracker HUD
-    const questBg = this.add.rectangle(550, 12, 240, 80, 0x111625, 0.85)
+    const questBg = this.add.rectangle(12, 500, 260, 80, 0x111625, 0.85)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setStrokeStyle(1, 0x3d4461)
       .setDepth(100);
 
-    this.questHudText = this.add.text(560, 18, '', {
+    this.questHudText = this.add.text(22, 508, '', {
       fontSize: '11px',
       color: '#ffeb3b',
       lineSpacing: 3

@@ -11,6 +11,9 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
   private hpBar?: Phaser.GameObjects.Graphics;
   private walkTween: Phaser.Tweens.Tween | null = null;
   private isAggroed: boolean = false;
+  private bossHpBarBg?: Phaser.GameObjects.Graphics;
+  private bossHpBarFg?: Phaser.GameObjects.Graphics;
+  private bossHpBarText?: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene, x: number, y: number, def: MonsterDefinition) {
     super(scene, x, y, `monster_${def.id}`);
@@ -27,6 +30,25 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
 
     this.hpBar = scene.add.graphics();
     this.hpBar.setDepth(15);
+
+    if (this.monsterDef.isBoss) {
+      this.bossHpBarBg = scene.add.graphics();
+      this.bossHpBarBg.setScrollFactor(0);
+      this.bossHpBarBg.setDepth(200);
+
+      this.bossHpBarFg = scene.add.graphics();
+      this.bossHpBarFg.setScrollFactor(0);
+      this.bossHpBarFg.setDepth(201);
+
+      this.bossHpBarText = scene.add.text(scene.cameras.main.width / 2, 30, def.name || 'BOSS', {
+        fontSize: '20px',
+        color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 4,
+        fontFamily: 'sans-serif'
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
+    }
+
     this.updateHpBar();
   }
 
@@ -107,6 +129,30 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
   private updateHpBar(): void {
     if (!this.hpBar) return;
     this.hpBar.clear();
+
+    if (this.monsterDef.isBoss && this.bossHpBarBg && this.bossHpBarFg) {
+      this.bossHpBarBg.clear();
+      this.bossHpBarFg.clear();
+      
+      const camW = this.scene.cameras.main.width;
+      const barW = 400;
+      const barH = 20;
+      const barX = (camW - barW) / 2;
+      const barY = 50;
+
+      // Background
+      this.bossHpBarBg.fillStyle(0x000000, 0.8);
+      this.bossHpBarBg.fillRect(barX, barY, barW, barH);
+      this.bossHpBarBg.lineStyle(2, 0xffd700, 1);
+      this.bossHpBarBg.strokeRect(barX, barY, barW, barH);
+
+      // Foreground
+      const hpRatio = Math.max(0, this.currentHp / this.monsterDef.maxHp);
+      this.bossHpBarFg.fillStyle(0xe74c3c, 1);
+      this.bossHpBarFg.fillRect(barX + 2, barY + 2, (barW - 4) * hpRatio, barH - 4);
+      
+      return; // Skip drawing small HP bar for bosses
+    }
 
     if (this.currentHp >= this.monsterDef.maxHp) {
       return; // Don't show if full HP
@@ -193,6 +239,9 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
     if (this.hpBar) {
       this.hpBar.destroy();
     }
+    if (this.bossHpBarBg) this.bossHpBarBg.destroy();
+    if (this.bossHpBarFg) this.bossHpBarFg.destroy();
+    if (this.bossHpBarText) this.bossHpBarText.destroy();
 
     // Emit event for quest & exp rewards
     this.scene.events.emit('monster-killed', {
@@ -219,6 +268,9 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
     if (this.hpBar) {
       this.hpBar.destroy();
     }
+    if (this.bossHpBarBg) this.bossHpBarBg.destroy();
+    if (this.bossHpBarFg) this.bossHpBarFg.destroy();
+    if (this.bossHpBarText) this.bossHpBarText.destroy();
     super.destroy(fromScene);
   }
 }

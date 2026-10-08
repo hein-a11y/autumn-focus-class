@@ -190,9 +190,23 @@ export class TavernScene extends Phaser.Scene {
 
     // Available & Active Quests List
     let yPos = -140;
-    const quests = Object.values(QUEST_DEFINITIONS);
+    const allQuests = Object.values(QUEST_DEFINITIONS);
+    
+    let displayQuests = allQuests.filter(q => 
+      this.questManager.isQuestActive(q.id) || 
+      this.questManager.canTurnIn(q.id)
+    );
+    
+    for (const q of allQuests) {
+      if (displayQuests.length >= 6) break;
+      if (!this.questManager.isQuestActive(q.id) && !this.questManager.isQuestCompleted(q.id)) {
+        if (!displayQuests.includes(q)) {
+          displayQuests.push(q);
+        }
+      }
+    }
 
-    quests.forEach(q => {
+    displayQuests.forEach(q => {
       const isActive = this.questManager.isQuestActive(q.id);
       const isCompleted = this.questManager.isQuestCompleted(q.id);
       const canTurnIn = this.questManager.canTurnIn(q.id);
