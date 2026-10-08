@@ -171,12 +171,15 @@ export class Companion extends Phaser.Physics.Arcade.Sprite {
     if (c.classType === 'warrior') {
       this.bonusAttack = 10;
       this.bonusDefense = 10;
-      this.scene.time.delayedCall(8000, () => {
+      this.updateBuffTint();
+      this.scene.time.delayedCall(skillDef.cooldown / 2, () => {
         this.bonusAttack = 0;
         this.bonusDefense = 0;
+        this.updateBuffTint();
       });
     } else if (c.classType === 'thief') {
       this.activeAttackMultiplier = 2;
+      this.updateBuffTint();
     } else if (c.classType === 'paladin') {
       const healAmount = Math.floor(c.maxHp * 0.3);
       c.hp = Math.min(c.maxHp, c.hp + healAmount);
@@ -209,6 +212,7 @@ export class Companion extends Phaser.Physics.Arcade.Sprite {
           source: 'companion'
         });
         this.activeAttackMultiplier = 1;
+        this.updateBuffTint();
       }
     }
   }
@@ -305,6 +309,15 @@ export class Companion extends Phaser.Physics.Arcade.Sprite {
     }
     
     this.activeAttackMultiplier = 1;
+    this.updateBuffTint();
+  }
+
+  public updateBuffTint(): void {
+    if (this.bonusAttack > 0 || this.activeAttackMultiplier > 1) {
+      this.setTint(0xff5555);
+    } else {
+      this.clearTint();
+    }
   }
 
   public takeDamage(amount: number): void {
@@ -312,9 +325,9 @@ export class Companion extends Phaser.Physics.Arcade.Sprite {
     const damage = Math.max(1, Math.round(amount - effectiveDefense / 2));
     this.companionData.hp = Math.max(0, this.companionData.hp - damage);
 
-    this.setTint(0xff5555);
+    this.setTint(0xff3333);
     this.scene.time.delayedCall(150, () => {
-      this.clearTint();
+      this.updateBuffTint();
     });
   }
 }

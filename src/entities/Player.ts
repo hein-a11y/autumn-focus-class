@@ -263,14 +263,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.bonusAttack = 10;
       this.bonusDefense = 10;
       this.scene.cameras.main.flash(200, 255, 0, 0); // Red flash
+      this.updateBuffTint();
       
-      this.scene.time.delayedCall(8000, () => {
+      this.scene.time.delayedCall(skillDef.cooldown / 2, () => {
         this.bonusAttack = 0;
         this.bonusDefense = 0;
+        this.updateBuffTint();
       });
     } else if (p.classType === 'thief') {
       this.activeAttackMultiplier = 2;
       this.scene.cameras.main.flash(200, 100, 100, 100);
+      this.updateBuffTint();
     } else if (p.classType === 'paladin') {
       this.scene.cameras.main.flash(200, 255, 255, 0);
       const healAmount = Math.floor(p.maxHp * 0.3);
@@ -312,6 +315,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       });
       // reset multiplier if used
       this.activeAttackMultiplier = 1;
+      this.updateBuffTint();
     }
   }
 
@@ -417,8 +421,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       });
     }
     this.activeAttackMultiplier = 1;
+    this.updateBuffTint();
 
     this.scene.cameras.main.shake(60, 0.002);
+  }
+
+  public updateBuffTint(): void {
+    if (this.bonusAttack > 0 || this.activeAttackMultiplier > 1) {
+      this.setTint(0xff5555);
+    } else {
+      this.clearTint();
+    }
   }
 
   public takeDamage(amount: number): void {
@@ -432,7 +445,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.isInvulnerable = true;
 
     this.scene.time.delayedCall(160, () => {
-      this.clearTint();
+      this.updateBuffTint();
     });
 
     this.scene.time.delayedCall(450, () => {
