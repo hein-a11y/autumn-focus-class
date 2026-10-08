@@ -17,17 +17,18 @@ export class HomeScene extends Phaser.Scene {
   }
 
   public create(): void {
-    const width = 800;
-    const height = 600;
+    const width = 400;
+    const height = 400;
 
     // Spawn Player
-    this.player = new Player(this, 400, 450);
+    this.player = new Player(this, 200, 300);
 
     this.createHomeLayout();
     this.spawnCompanions();
 
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.setBounds(0, 0, width, height);
+    this.cameras.main.setZoom(1.5); // Zoom in a bit for indoor feel
     this.physics.world.setBounds(0, 0, width, height);
 
     this.createHUD();
@@ -64,43 +65,34 @@ export class HomeScene extends Phaser.Scene {
 
   private createHomeLayout(): void {
     // Floor
-    for (let x = 0; x < 800; x += 16) {
-      for (let y = 0; y < 600; y += 16) {
+    for (let x = 0; x < 400; x += 16) {
+      for (let y = 0; y < 400; y += 16) {
         this.add.image(x + 8, y + 8, 'tile_wood_floor').setDepth(0);
       }
     }
 
     // Walls (Border)
-    for (let x = 0; x < 800; x += 16) {
+    for (let x = 0; x < 400; x += 16) {
       this.add.image(x + 8, 8, 'tile_stone_wall').setDepth(1);
-      this.add.image(x + 8, 592, 'tile_stone_wall').setDepth(1);
+      this.add.image(x + 8, 392, 'tile_stone_wall').setDepth(1);
     }
-    for (let y = 0; y < 600; y += 16) {
+    for (let y = 0; y < 400; y += 16) {
       this.add.image(8, y + 8, 'tile_stone_wall').setDepth(1);
-      this.add.image(792, y + 8, 'tile_stone_wall').setDepth(1);
+      this.add.image(392, y + 8, 'tile_stone_wall').setDepth(1);
     }
 
     // Rug in the middle
-    this.add.rectangle(400, 300, 200, 160, 0x8d6e63).setDepth(1);
-
-    // Decorations
-    this.add.image(100, 100, 'furniture_pack', 'furniture_1').setDepth(2);
-    this.add.image(150, 100, 'furniture_pack', 'furniture_2').setDepth(2);
-    this.add.image(700, 100, 'furniture_pack', 'furniture_3').setDepth(2);
-    this.add.image(750, 100, 'furniture_pack', 'furniture_4').setDepth(2);
-    
-    // Table in middle
-    this.add.image(400, 300, 'furniture_pack', 'furniture_10').setDepth(2);
+    this.add.rectangle(200, 200, 100, 80, 0x8d6e63).setDepth(1);
 
     // The Bed (using our newly generated texture atlas!)
-    const bed = this.add.image(400, 150, 'furniture_pack', 'furniture_14').setDepth(2);
+    const bed = this.add.image(200, 100, 'furniture_pack', 'furniture_14').setDepth(2);
     this.physics.add.existing(bed, true);
     this.physics.add.collider(this.player, bed);
 
     // Exit Door / Mat
-    const door = this.add.rectangle(400, 570, 80, 40, 0x4e342e).setDepth(1);
+    const door = this.add.rectangle(200, 370, 40, 20, 0x4e342e).setDepth(1);
     this.physics.add.existing(door, true);
-    this.add.text(400, 570, '外へ', { fontSize: '14px', color: '#ffffff' }).setOrigin(0.5).setDepth(2);
+    this.add.text(200, 370, '外へ', { fontSize: '10px', color: '#ffffff' }).setOrigin(0.5).setDepth(2);
     
     this.physics.add.overlap(this.player, door, () => {
       this.scene.start('VillageScene');
@@ -110,17 +102,9 @@ export class HomeScene extends Phaser.Scene {
   private spawnCompanions(): void {
     this.companions.forEach(c => c.destroy());
     this.companions = [];
-    const offsets = [
-      { x: -28, y: 0 },
-      { x: 28, y: 0 },
-      { x: 0, y: -28 },
-      { x: 0, y: 28 },
-      { x: -28, y: -28 },
-      { x: 28, y: -28 }
-    ];
     this.gameState.recruitedCompanions.forEach((data, index) => {
-      const off = offsets[index % offsets.length];
-      const comp = new Companion(this, this.player.x + off.x, this.player.y + off.y, data, this.player);
+      const offsetX = index === 0 ? -24 : 24;
+      const comp = new Companion(this, this.player.x + offsetX, this.player.y + 16, data, this.player);
       this.companions.push(comp);
     });
   }
@@ -140,7 +124,7 @@ export class HomeScene extends Phaser.Scene {
     const py = this.player.y;
 
     // Bed interaction range
-    if (Phaser.Math.Distance.Between(px, py, 400, 150) < 50) {
+    if (Phaser.Math.Distance.Between(px, py, 200, 100) < 50) {
       this.interactPromptText.setText('[E] ベッドで休む (全回復&セーブ)');
       this.interactPromptText.setPosition(200, 150);
       this.interactPromptText.setVisible(true);
@@ -154,7 +138,7 @@ export class HomeScene extends Phaser.Scene {
     const px = this.player.x;
     const py = this.player.y;
 
-    if (Phaser.Math.Distance.Between(px, py, 400, 150) < 50) {
+    if (Phaser.Math.Distance.Between(px, py, 200, 100) < 50) {
       this.openBedRestModal();
     }
   }
@@ -165,7 +149,7 @@ export class HomeScene extends Phaser.Scene {
     this.gameState.healAll();
     this.gameState.saveToStorage();
 
-    const container = this.add.container(400, 300).setScrollFactor(0).setDepth(200);
+    const container = this.add.container(200, 200).setScrollFactor(0).setDepth(200);
     const bg = this.add.rectangle(0, 0, 260, 120, 0x1a2332, 0.95)
       .setStrokeStyle(2, 0x4caf50);
 

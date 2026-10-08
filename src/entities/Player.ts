@@ -13,8 +13,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     A: Phaser.Input.Keyboard.Key;
     S: Phaser.Input.Keyboard.Key;
     D: Phaser.Input.Keyboard.Key;
-    SPACE: Phaser.Input.Keyboard.Key;
-    J: Phaser.Input.Keyboard.Key;
   };
 
   // Set of physically pressed keys (immune to Japanese IME 229 keyCode issue)
@@ -44,9 +42,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         W: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
         A: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
         S: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
-        D: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
-        SPACE: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
-        J: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J)
+        D: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D)
       };
     }
 
@@ -187,12 +183,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     // Attack input
-    const attackPressed =
-      this.activeKeys.has('Space') ||
-      this.activeKeys.has('KeyJ') ||
-      this.activeKeys.has('j') ||
-      Phaser.Input.Keyboard.JustDown(this.wasdKeys?.SPACE) ||
-      Phaser.Input.Keyboard.JustDown(this.wasdKeys?.J);
+    const attackPressed = pointer.leftButtonDown() || pointer.isDown;
 
     if (attackPressed) {
       this.tryAttack(time);
@@ -323,8 +314,40 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     this.scene.cameras.main.shake(120, 0.006);
 
+    // Auto-heal logic
+    if (this.gameState.player.hp > 0 && this.gameState.player.hp <= this.gameState.player.maxHp * 0.4) {
+      if (this.gameState.getItemCount('herb_large') > 0) {
+        this.gameState.removeItem('herb_large', 1);
+        this.gameState.player.hp = Math.min(this.gameState.player.maxHp, this.gameState.player.hp + 100);
+        this.showHealText('大型ポーション使用 (+100 HP)');
+      } else if (this.gameState.getItemCount('herb_small') > 0) {
+        this.gameState.removeItem('herb_small', 1);
+        this.gameState.player.hp = Math.min(this.gameState.player.maxHp, this.gameState.player.hp + 30);
+        this.showHealText('小型ポーション使用 (+30 HP)');
+      }
+    }
+
     if (this.gameState.player.hp <= 0) {
       this.scene.events.emit('player-died');
     }
+  }
+
+  private showHealText(text: string): void {
+    const t = this.scene.add.text(this.x, this.y - 20, text, {
+      fontSize: '14px',
+      color: '#00ff00',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(200);
+
+    this.scene.tweens.add({
+      targets: t,
+      y: this.y - 60,
+      alpha: 0,
+      duration: 1500,
+      ease: 'Power2',
+      onComplete: () => t.destroy()
+    });
   }
 }

@@ -164,5 +164,12 @@ export const EXP_TABLE: number[] = [
   2400,  // Lv 7
   3600,  // Lv 8
   5200,  // Lv 9
-  7500   // Lv 10 (Max)
+  7500   // Lv 10
 ];
+
+// Generate EXP for levels 11 to 50
+for (let i = 10; i <= 50; i++) {
+  const prev = EXP_TABLE[i - 1];
+  const diff = Math.floor((prev - EXP_TABLE[i - 2]) * 1.15); // Increase diff by 15% each level
+  EXP_TABLE.push(prev + diff);
+}

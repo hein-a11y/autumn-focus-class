@@ -1,4 +1,4 @@
-export type QuestRank = 'E' | 'D' | 'C' | 'B' | 'A';
+export type QuestRank = 'E' | 'D' | 'C' | 'B' | 'A' | 'S';
 export type QuestType = 'gather' | 'kill';
 
 export interface QuestReward {
@@ -203,6 +203,42 @@ export const QUEST_DEFINITIONS: Record<string, QuestDefinition> = {
     reward: {
       gold: 2500,
       exp: 1500
+    }
+  },
+  quest_s1: {
+    id: 'quest_s1',
+    title: '【高難易度】幻影の騎士達',
+    rank: 'S',
+    recommendedLevel: 'Lv 15+',
+    area: '最前線ダンジョン (B7-8)',
+    description: '深層で異常発生したシャドウナイトを10体討伐する。',
+    objective: {
+      type: 'kill',
+      targetId: 'shadow_knight',
+      targetName: 'シャドウナイト',
+      requiredCount: 10
+    },
+    reward: {
+      gold: 5000,
+      exp: 3000
+    }
+  },
+  quest_s2: {
+    id: 'quest_s2',
+    title: '【限界突破】果てなき奈落への挑戦',
+    rank: 'S',
+    recommendedLevel: 'Lv 20+',
+    area: '最前線ダンジョン (B10 奈落のコア)',
+    description: 'より強大になった奈落のボスを3体討伐する。',
+    objective: {
+      type: 'kill',
+      targetId: 'dungeon_boss',
+      targetName: 'ダンジョンボス',
+      requiredCount: 3
+    },
+    reward: {
+      gold: 12000,
+      exp: 8000
     }
   }
 };

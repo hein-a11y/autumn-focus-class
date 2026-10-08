@@ -48,6 +48,7 @@ export class GameState {
 
   public unlockedForestArea: number = 1;
   public unlockedDungeonFloor: number = 1;
+  public levelCap: number = 10;
 
   public onStateChanged?: () => void;
 
@@ -116,11 +117,11 @@ export class GameState {
     this.player.exp += amount;
     let leveledUp = false;
 
-    while (this.player.level < 10) {
+    while (this.player.level < this.levelCap) {
       const neededExp = EXP_TABLE[this.player.level];
       if (this.player.exp >= neededExp) {
         this.player.level++;
-        this.player.maxExp = this.player.level < 10 ? EXP_TABLE[this.player.level] : neededExp;
+        this.player.maxExp = this.player.level < this.levelCap ? EXP_TABLE[this.player.level] : neededExp;
         const newStats = calculateStatsForLevel(this.player.classType, this.player.level);
         this.player.maxHp = newStats.maxHp;
         this.player.maxMp = newStats.maxMp;
@@ -199,8 +200,8 @@ export class GameState {
   }
 
   public recruitCompanion(name: string, gender: Gender, classType: ClassType): boolean {
-    if (this.recruitedCompanions.length >= 2) {
-      return false; // Max 2 bots
+    if (this.recruitedCompanions.length >= 5) {
+      return false; // Max 5 bots
     }
     const stats = calculateStatsForLevel(classType, this.player.level);
     this.recruitedCompanions.push({
@@ -239,12 +240,17 @@ export class GameState {
         activeQuests: this.activeQuests,
         completedQuests: this.completedQuests,
         unlockedForestArea: this.unlockedForestArea,
-        unlockedDungeonFloor: this.unlockedDungeonFloor
+        unlockedDungeonFloor: this.unlockedDungeonFloor,
+        levelCap: this.levelCap
       };
       localStorage.setItem('frontline_save_data', JSON.stringify(data));
     } catch (e) {
       console.warn('Failed to save to localStorage', e);
     }
+  }
+
+  public hasSaveData(): boolean {
+    return !!localStorage.getItem('frontline_save_data');
   }
 
   public loadFromStorage(): boolean {
@@ -260,6 +266,7 @@ export class GameState {
         this.completedQuests = data.completedQuests || [];
         this.unlockedForestArea = data.unlockedForestArea || 1;
         this.unlockedDungeonFloor = data.unlockedDungeonFloor || 1;
+        this.levelCap = data.levelCap || 10;
         this.notifyChange();
         return true;
       }

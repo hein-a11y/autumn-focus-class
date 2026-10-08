@@ -67,7 +67,7 @@ export class DungeonScene extends Phaser.Scene {
     this.player.update(time);
 
     for (const comp of this.companions) {
-      comp.update(time, this.monsters);
+      comp.update(time, this.monsters, this.oreNodes);
     }
 
     for (let i = this.monsters.length - 1; i >= 0; i--) {
@@ -186,9 +186,17 @@ export class DungeonScene extends Phaser.Scene {
   private spawnCompanions(): void {
     this.companions.forEach(c => c.destroy());
     this.companions = [];
+    const offsets = [
+      { x: -28, y: 0 },
+      { x: 28, y: 0 },
+      { x: 0, y: -28 },
+      { x: 0, y: 28 },
+      { x: -28, y: -28 },
+      { x: 28, y: -28 }
+    ];
     this.gameState.recruitedCompanions.forEach((data, index) => {
-      const offsetX = index === 0 ? -24 : 24;
-      const comp = new Companion(this, this.player.x + offsetX, this.player.y + 16, data, this.player);
+      const off = offsets[index % offsets.length];
+      const comp = new Companion(this, this.player.x + off.x, this.player.y + off.y, data, this.player);
       this.companions.push(comp);
     });
   }
@@ -358,6 +366,18 @@ export class DungeonScene extends Phaser.Scene {
       }
     });
 
+    // Companion gather
+    this.events.on('companion-gather', (data: { companion: Companion; node: any }) => {
+      const node = data.node;
+      if (!node.isMined) {
+        node.isMined = true;
+        node.sprite.setAlpha(0.25);
+        this.gameState.addItem(node.itemId, 1);
+        this.questManager.recordGather(node.itemId, 1);
+        this.showFloatingMessage(data.companion.x, data.companion.y - 10, `+1 ${node.itemName}`);
+      }
+    });
+
     // Player died
     this.events.on('player-died', () => {
       this.showFloatingMessage(this.player.x, this.player.y, 'ダンジョンで力尽きた... 村へ送還', '#ff4444');
@@ -457,7 +477,7 @@ export class DungeonScene extends Phaser.Scene {
       `Lv.${p.level} ${p.name} | HP: ${p.hp}/${p.maxHp} | MP: ${p.mp}/${p.maxMp}\n` +
       `EXP: ${p.exp}/${p.maxExp} | 所持金: ${p.gold} G\n` +
       `所持鉱石数: ${this.gameState.getItemCount('ore_copper') + this.gameState.getItemCount('ore_iron') + this.gameState.getItemCount('ore_silver')}個\n` +
-      `操作: [SPACE/J] 攻撃 | [E] 採掘`
+      `操作: [左クリック] 攻撃 | [E] 採掘`
     );
   }
 }

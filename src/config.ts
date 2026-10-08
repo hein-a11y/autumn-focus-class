@@ -5,6 +5,7 @@ import { VillageScene } from './scenes/VillageScene';
 import { ForestScene } from './scenes/ForestScene';
 import { DungeonScene } from './scenes/DungeonScene';
 import { HomeScene } from './scenes/HomeScene';
+import { TavernScene } from './scenes/TavernScene';
 
 export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -29,6 +30,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     CharacterSelectScene,
     VillageScene,
     HomeScene,
+    TavernScene,
     ForestScene,
     DungeonScene
   ]
