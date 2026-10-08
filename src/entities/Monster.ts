@@ -64,38 +64,117 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
       const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
       
       if (this.monsterDef.isBoss) {
-        // Boss behavior: maintain distance and shoot
         const optimalDistance = 140;
         
+        // Approach if too far, otherwise stay in place
         if (dist > optimalDistance) {
           this.setVelocity(
             Math.cos(angle) * this.monsterDef.speed,
             Math.sin(angle) * this.monsterDef.speed
           );
-        } else if (dist < optimalDistance - 30) {
-          this.setVelocity(
-            -Math.cos(angle) * this.monsterDef.speed,
-            -Math.sin(angle) * this.monsterDef.speed
-          );
         } else {
-          this.setVelocity(0, 0);
+          this.setVelocity(0, 0); // Don't run away!
         }
 
-        // Boss ranged attack
-        if (time - this.lastAttackTime > 1500) {
-          this.lastAttackTime = time;
-          const orb = this.scene.physics.add.sprite(this.x, this.y, 'effect_magic_orb').setDepth(20).setTint(0xff55ff);
-          const orbSpeed = 220;
-          orb.setVelocity(Math.cos(angle) * orbSpeed, Math.sin(angle) * orbSpeed);
-          
-          this.scene.physics.add.overlap(orb, target as unknown as Phaser.Physics.Arcade.Sprite, (o, t) => {
+        const isClose = dist < 65;
+        const targetSprite = target as unknown as Phaser.Physics.Arcade.Sprite;
+
+        // If target is close, boss considers AoE or Melee
+        if (isClose) {
+          if (time - (this as any).lastBossAoETime > 8000 || !(this as any).lastBossAoETime) {
+            (this as any).lastBossAoETime = time;
+            
+            // Boss AoE Animation (charge up effect)
+            this.scene.tweens.add({
+              targets: this,
+              scale: this.scaleX * 1.15,
+              yoyo: true,
+              duration: 200,
+              ease: 'Sine.easeInOut'
+            });
+
+            // Trigger AoE Knockback
+            const aoeCircle = this.scene.add.circle(this.x, this.y, 85, 0xff0000, 0.4).setDepth(19);
+            this.scene.tweens.add({
+              targets: aoeCircle,
+              scale: 1.5,
+              alpha: 0,
+              duration: 400,
+              onComplete: () => aoeCircle.destroy()
+            });
+
+            // Hit all nearby characters
+            const scene = this.scene as any;
+            const targetsToHit = [];
+            if (scene.player && Phaser.Math.Distance.Between(this.x, this.y, scene.player.x, scene.player.y) <= 90) {
+              targetsToHit.push(scene.player);
+            }
+            if (scene.companions) {
+              scene.companions.forEach((comp: any) => {
+                if (comp.companionData && comp.companionData.hp > 0 && Phaser.Math.Distance.Between(this.x, this.y, comp.x, comp.y) <= 90) {
+                  targetsToHit.push(comp);
+                }
+              });
+            }
+
+            targetsToHit.forEach(t => {
+              if (t.takeDamage) t.takeDamage(this.monsterDef.attack * 1.5);
+              const angleToT = Phaser.Math.Angle.Between(this.x, this.y, t.x, t.y);
+              this.scene.tweens.add({
+                targets: t,
+                x: t.x + Math.cos(angleToT) * 100,
+                y: t.y + Math.sin(angleToT) * 100,
+                duration: 200,
+                ease: 'Power2'
+              });
+            });
+
+          } else if (dist < 40 && time - this.lastAttackTime > 1200) {
+            // Standard Melee if close
+            this.lastAttackTime = time;
             target.takeDamage(this.monsterDef.attack);
-            orb.destroy();
-          });
-          
-          this.scene.time.delayedCall(2000, () => {
-            if (orb.active) orb.destroy();
-          });
+            
+            // Boss Melee Animation (Lunge)
+            this.scene.tweens.add({
+              targets: this,
+              x: this.x + Math.cos(angle) * 15,
+              y: this.y + Math.sin(angle) * 15,
+              yoyo: true,
+              duration: 100,
+              ease: 'Power2'
+            });
+
+            // Visual feedback for boss melee
+            const slash = this.scene.add.sprite(targetSprite.x, targetSprite.y, 'effect_slash').setDepth(20).setTint(0xff5555);
+            this.scene.tweens.add({ targets: slash, alpha: 0, scale: 1.5, duration: 150, onComplete: () => slash.destroy() });
+          }
+        } else {
+          // If not close, use ranged attack
+          if (time - this.lastAttackTime > 1500) {
+            this.lastAttackTime = time;
+            
+            // Boss Ranged Animation (Hop)
+            this.scene.tweens.add({
+              targets: this,
+              y: this.y - 15,
+              yoyo: true,
+              duration: 100,
+              ease: 'Power2'
+            });
+
+            const orb = this.scene.physics.add.sprite(this.x, this.y, 'effect_magic_orb').setDepth(20).setTint(0xff55ff);
+            const orbSpeed = 220;
+            orb.setVelocity(Math.cos(angle) * orbSpeed, Math.sin(angle) * orbSpeed);
+            
+            this.scene.physics.add.overlap(orb, targetSprite, (o, t) => {
+              target.takeDamage(this.monsterDef.attack);
+              orb.destroy();
+            });
+            
+            this.scene.time.delayedCall(2000, () => {
+              if (orb.active) orb.destroy();
+            });
+          }
         }
       } else {
         // Normal monster behavior: chase and melee
@@ -108,6 +187,16 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
         if (dist < 32 && time - this.lastAttackTime > 800) {
           this.lastAttackTime = time;
           target.takeDamage(this.monsterDef.attack);
+          
+          // Normal Monster Melee Animation (Lunge)
+          this.scene.tweens.add({
+            targets: this,
+            x: this.x + Math.cos(angle) * 10,
+            y: this.y + Math.sin(angle) * 10,
+            yoyo: true,
+            duration: 100,
+            ease: 'Power2'
+          });
         }
       }
     } else {

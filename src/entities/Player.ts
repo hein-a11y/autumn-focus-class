@@ -441,6 +441,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const effectiveDamage = Math.max(1, Math.round(amount - effectiveDefense / 2));
     this.gameState.player.hp = Math.max(0, this.gameState.player.hp - effectiveDamage);
 
+    if (this.gameState.player.hp <= 0) {
+      this.scene.tweens.add({
+        targets: this,
+        alpha: 0,
+        duration: 800,
+        ease: 'Power2',
+        onComplete: () => {
+          // Typically we'd show a game over screen or respawn here
+        }
+      });
+      return;
+    }
+
     this.setTint(0xff3333);
     this.isInvulnerable = true;
 

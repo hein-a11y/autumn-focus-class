@@ -33,13 +33,17 @@ export class Companion extends Phaser.Physics.Arcade.Sprite {
     this.setOffset(7, 9);
     this.setDepth(9);
 
-    this.skillCooldownText = scene.add.text(x, y - 26, 'Skill: Ready', {
-      fontSize: '8px',
-      color: '#00ff00',
+    const index = GameState.getInstance().recruitedCompanions.findIndex(c => c === data);
+    const hudX = 800 - 160; // Assuming screen width is 800
+    const hudY = 20 + Math.max(0, index) * 45;
+
+    this.skillCooldownText = scene.add.text(hudX, hudY, 'Skill: Ready', {
+      fontSize: '11px',
+      color: '#ffffff',
       backgroundColor: '#000000aa',
-      padding: { x: 2, y: 1 },
-      align: 'center'
-    }).setOrigin(0.5).setDepth(20);
+      padding: { x: 4, y: 4 },
+      lineSpacing: 2
+    }).setOrigin(0).setDepth(200).setScrollFactor(0);
   }
 
   public destroy(fromScene?: boolean): void {
@@ -140,11 +144,10 @@ export class Companion extends Phaser.Physics.Arcade.Sprite {
 
     // Update skill text UI
     if (this.skillCooldownText) {
-      this.skillCooldownText.setPosition(this.x, this.y - 26);
       const skillDef = CLASS_SKILLS[this.companionData.classType];
       
       const currentAtk = (this.companionData.attack + this.bonusAttack) * this.activeAttackMultiplier;
-      const statusStr = `HP:${this.companionData.hp}/${this.companionData.maxHp} ATK:${currentAtk}`;
+      const statusStr = `[${this.companionData.name}]\nHP:${this.companionData.hp}/${this.companionData.maxHp} ATK:${currentAtk}`;
 
       if (skillDef) {
         const timeSinceSkill = time - this.lastSkillTime;
@@ -327,13 +330,30 @@ export class Companion extends Phaser.Physics.Arcade.Sprite {
   }
 
   public takeDamage(amount: number): void {
+    if (this.companionData.hp <= 0) return;
+
     const effectiveDefense = this.companionData.defense + this.bonusDefense;
     const damage = Math.max(1, Math.round(amount - effectiveDefense / 2));
     this.companionData.hp = Math.max(0, this.companionData.hp - damage);
 
+    if (this.companionData.hp <= 0) {
+      this.scene.tweens.add({
+        targets: this,
+        alpha: 0,
+        duration: 800,
+        ease: 'Power2',
+        onComplete: () => {
+          this.setActive(false);
+          this.setVisible(false);
+          if (this.skillCooldownText) this.skillCooldownText.setVisible(false);
+        }
+      });
+      return;
+    }
+
     this.setTint(0xff3333);
     this.scene.time.delayedCall(150, () => {
-      this.updateBuffTint();
+      if (this.companionData.hp > 0) this.updateBuffTint();
     });
   }
 }
