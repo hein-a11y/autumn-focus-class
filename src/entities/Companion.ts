@@ -33,11 +33,12 @@ export class Companion extends Phaser.Physics.Arcade.Sprite {
     this.setOffset(7, 9);
     this.setDepth(9);
 
-    this.skillCooldownText = scene.add.text(x, y - 20, 'Skill: Ready', {
+    this.skillCooldownText = scene.add.text(x, y - 26, 'Skill: Ready', {
       fontSize: '8px',
       color: '#00ff00',
       backgroundColor: '#000000aa',
-      padding: { x: 2, y: 1 }
+      padding: { x: 2, y: 1 },
+      align: 'center'
     }).setOrigin(0.5).setDepth(20);
   }
 
@@ -139,20 +140,25 @@ export class Companion extends Phaser.Physics.Arcade.Sprite {
 
     // Update skill text UI
     if (this.skillCooldownText) {
-      this.skillCooldownText.setPosition(this.x, this.y - 20);
+      this.skillCooldownText.setPosition(this.x, this.y - 26);
       const skillDef = CLASS_SKILLS[this.companionData.classType];
+      
+      const currentAtk = (this.companionData.attack + this.bonusAttack) * this.activeAttackMultiplier;
+      const statusStr = `HP:${this.companionData.hp}/${this.companionData.maxHp} ATK:${currentAtk}`;
+
       if (skillDef) {
         const timeSinceSkill = time - this.lastSkillTime;
         if (timeSinceSkill < skillDef.cooldown) {
           const remaining = ((skillDef.cooldown - timeSinceSkill) / 1000).toFixed(1);
-          this.skillCooldownText.setText(`CD: ${remaining}s`);
+          this.skillCooldownText.setText(`${statusStr}\nCD: ${remaining}s`);
           this.skillCooldownText.setColor('#ffaaaa');
         } else {
-          this.skillCooldownText.setText(skillDef.name);
+          this.skillCooldownText.setText(`${statusStr}\n${skillDef.name}`);
           this.skillCooldownText.setColor('#aaffaa');
         }
       } else {
-        this.skillCooldownText.setVisible(false);
+        this.skillCooldownText.setText(statusStr);
+        this.skillCooldownText.setColor('#ffffff');
       }
     }
   }

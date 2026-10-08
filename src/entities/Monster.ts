@@ -13,7 +13,8 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
   private isAggroed: boolean = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, def: MonsterDefinition) {
-    super(scene, x, y, `monster_${def.id}`);
+    const textureKey = def.id === 'demon_lord' ? 'monster_demon_lord_sprite' : `monster_${def.id}`;
+    super(scene, x, y, textureKey);
     this.monsterDef = def;
     this.currentHp = def.maxHp;
 
@@ -25,8 +26,16 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
 
     this.setCollideWorldBounds(true);
-    const boxSize = Math.max(14, def.size);
-    this.setSize(boxSize, boxSize);
+    let boxSize = Math.max(14, def.size);
+    
+    if (def.id === 'demon_lord') {
+      this.setSize(50, 50);
+      this.setOffset((237 - 50) / 2, 231 - 50); // Feet of the 237x231 sprite
+      this.setScale(0.8); // Slightly scale down
+    } else {
+      this.setSize(boxSize, boxSize);
+    }
+    
     this.setDepth(8);
 
     this.hpBar = scene.add.graphics();
@@ -156,7 +165,7 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
     const barW = Math.max(24, this.monsterDef.size);
     const barH = 4;
     const barX = this.x - barW / 2;
-    const barY = this.y - this.height / 2 - 8;
+    const barY = this.y - (this.height * this.scaleY) / 2 - 8;
 
     // Background
     this.hpBar.fillStyle(0x000000, 0.7);

@@ -31,6 +31,7 @@ export class BootScene extends Phaser.Scene {
       frameWidth: 48,
       frameHeight: 64
     });
+    this.load.image('monster_demon_lord_sprite', 'assets/characters/demon_lord.png');
 
     // Load Furniture Atlas
     this.load.atlas('furniture_pack', 'assets/furniture/furniture.png', 'assets/furniture/furniture.json');
