@@ -64,10 +64,7 @@ export class TavernScene extends Phaser.Scene {
       companion.update(time, []);
     }
 
-    // Exit portal at bottom
-    if (this.player.y > 580) {
-      this.scene.start('VillageScene');
-    }
+    // Exit portal handled by physics overlap now
 
     this.checkNearbyInteractables();
   }
@@ -114,7 +111,12 @@ export class TavernScene extends Phaser.Scene {
     this.add.text(600, 100, '仲間\n雇入', { fontSize: '10px', color: '#ffffff', align: 'center' }).setOrigin(0.5).setDepth(4);
     this.add.text(600, 130, '[E] BOT雇用', { fontSize: '11px', color: '#ffb74d', fontStyle: 'bold' }).setOrigin(0.5).setDepth(3);
     
-    // Exit label
+    // Exit label and door
+    const door = this.add.rectangle(400, 580, 100, 40, 0x000000, 0).setDepth(1);
+    this.physics.add.existing(door, true);
+    this.physics.add.overlap(this.player, door, () => {
+      this.scene.start('VillageScene');
+    });
     this.add.text(400, 570, '▼ 村へ戻る', { fontSize: '14px', color: '#ffffff' }).setOrigin(0.5).setDepth(3);
   }
 

@@ -59,6 +59,7 @@ export class GameState {
   public unlockedAbyssFloor: number = 1;
   public unlockedSkyFloor: number = 1;
   public levelCap: number = 50;
+  public purchasedUpgrades = { attack: 0, defense: 0, hp: 0 };
 
   public onStateChanged?: () => void;
 
@@ -266,6 +267,7 @@ export class GameState {
         unlockedIceFloor: this.unlockedIceFloor,
         unlockedAbyssFloor: this.unlockedAbyssFloor,
         unlockedSkyFloor: this.unlockedSkyFloor,
+        purchasedUpgrades: this.purchasedUpgrades,
         levelCap: this.levelCap
       };
       localStorage.setItem('frontline_save_data', JSON.stringify(data));
@@ -295,6 +297,7 @@ export class GameState {
         this.unlockedIceFloor = data.unlockedIceFloor || 1;
         this.unlockedAbyssFloor = data.unlockedAbyssFloor || 1;
         this.unlockedSkyFloor = data.unlockedSkyFloor || 1;
+        this.purchasedUpgrades = data.purchasedUpgrades || { attack: 0, defense: 0, hp: 0 };
         this.levelCap = data.levelCap || 50;
         
         // Backwards compatibility for old saves
@@ -318,8 +321,9 @@ export class GameState {
 
   
   public recalculatePlayerStats(): void {
-    let bonusAttack = 0;
-    let bonusDefense = 0;
+    let bonusAttack = this.purchasedUpgrades.attack * 5; // +5 per upgrade
+    let bonusDefense = this.purchasedUpgrades.defense * 3; // +3 per upgrade
+    let bonusHp = this.purchasedUpgrades.hp * 20; // +20 per upgrade
     let bonusSpeed = 0;
 
     if (this.player.equippedWeapon) {
@@ -342,6 +346,8 @@ export class GameState {
     this.player.attack = this.player.baseAttack + bonusAttack;
     this.player.defense = this.player.baseDefense + bonusDefense;
     this.player.speed = this.player.baseSpeed + bonusSpeed;
+    this.player.maxHp = calculateStatsForLevel(this.player.classType, this.player.level).maxHp + bonusHp;
+    if (this.player.hp > this.player.maxHp) this.player.hp = this.player.maxHp;
   }
 
   public equipItem(itemId: string): void {
