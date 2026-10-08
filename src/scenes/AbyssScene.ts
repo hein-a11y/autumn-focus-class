@@ -230,12 +230,12 @@ export class AbyssScene extends Phaser.Scene {
       oreType = 'ore_adamantite';
     } else {
       themeName = '魔王の玉座 (B10 BOSS)';
-      monsterTypes = ['chaos_knight', 'demon_lord'];
+      monsterTypes = ['demon_lord'];
       oreType = 'ore_adamantite';
     }
 
     if (this.floorText) {
-      this.floorText.setText(`【ダンジョン】 B${this.currentFloor}F: ${themeName}`);
+      this.floorText.setText(`【深淵】 B${this.currentFloor}F: ${themeName}`);
     }
 
     // Spawn Ore Nodes

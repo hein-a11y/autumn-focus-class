@@ -235,7 +235,7 @@ export class IceCavernScene extends Phaser.Scene {
     }
 
     if (this.floorText) {
-      this.floorText.setText(`【ダンジョン】 B${this.currentFloor}F: ${themeName}`);
+      this.floorText.setText(`【氷の洞窟】 B${this.currentFloor}F: ${themeName}`);
     }
 
     // Spawn Ore Nodes
