@@ -140,7 +140,7 @@ export class AbyssScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(3);
 
     this.physics.add.overlap(this.player, stairsDown, () => {
-      if (this.currentFloor < 5) {
+      if (this.currentFloor < 10) {
         this.currentFloor++;
         if (this.currentFloor > this.gameState.unlockedAbyssFloor) {
           this.gameState.unlockedAbyssFloor = this.currentFloor;
@@ -169,14 +169,11 @@ export class AbyssScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(3);
 
     this.physics.add.overlap(this.player, elevator, () => {
-      if (this.gameState.unlockedAbyssFloor >= 4) {
-        this.currentFloor = 4;
-      } else if (this.gameState.unlockedAbyssFloor >= 2) {
-        this.currentFloor = 2;
-      } else {
-        this.showFloatingMessage(500, 60, '昇降機は2F到達後に利用可能です');
+      if (this.gameState.unlockedAbyssFloor <= 1) {
+        this.showFloatingMessage(500, 60, 'まだ深層に到達していません');
         return;
       }
+      this.currentFloor = Math.max(1, this.gameState.unlockedAbyssFloor - 1);
       this.player.setPosition(100, height / 2);
       this.spawnFloorContents();
     });
@@ -257,7 +254,7 @@ export class AbyssScene extends Phaser.Scene {
     }
 
     // Spawn Monsters
-    const monsterCount = this.currentFloor === 10 ? 4 : 8;
+    const monsterCount = this.currentFloor === 10 ? 1 : 8;
     for (let i = 0; i < monsterCount; i++) {
       const type = monsterTypes[i % monsterTypes.length];
       const mDef = MONSTER_DEFINITIONS[type];

@@ -140,7 +140,7 @@ export class VolcanoScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(3);
 
     this.physics.add.overlap(this.player, stairsDown, () => {
-      if (this.currentFloor < 5) {
+      if (this.currentFloor < 10) {
         this.currentFloor++;
         if (this.currentFloor > this.gameState.unlockedVolcanoFloor) {
           this.gameState.unlockedVolcanoFloor = this.currentFloor;
@@ -162,21 +162,18 @@ export class VolcanoScene extends Phaser.Scene {
       .setStrokeStyle(2, 0xd7ccc8).setDepth(2);
     this.physics.add.existing(elevator, true);
 
-    this.add.text(500, 30, '昇降機 (2F/4F)', {
+    this.add.text(500, 30, '昇降機 (最深部の手前)', {
       fontSize: '10px',
       color: '#ffffff',
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(3);
 
     this.physics.add.overlap(this.player, elevator, () => {
-      if (this.gameState.unlockedVolcanoFloor >= 4) {
-        this.currentFloor = 4;
-      } else if (this.gameState.unlockedVolcanoFloor >= 2) {
-        this.currentFloor = 2;
-      } else {
-        this.showFloatingMessage(500, 60, '昇降機は2F到達後に利用可能です');
+      if (this.gameState.unlockedVolcanoFloor <= 1) {
+        this.showFloatingMessage(500, 60, 'まだ深層に到達していません');
         return;
       }
+      this.currentFloor = Math.max(1, this.gameState.unlockedVolcanoFloor - 1);
       this.player.setPosition(100, height / 2);
       this.spawnFloorContents();
     });
@@ -233,7 +230,7 @@ export class VolcanoScene extends Phaser.Scene {
       oreType = 'ore_mithril';
     } else {
       themeName = '奈落のコア (B10 BOSS)';
-      monsterTypes = ['shadow_knight', 'dungeon_boss'];
+      monsterTypes = ['volcano_dragon'];
       oreType = 'ore_adamantite';
     }
 
@@ -257,7 +254,7 @@ export class VolcanoScene extends Phaser.Scene {
     }
 
     // Spawn Monsters
-    const monsterCount = this.currentFloor === 10 ? 4 : 8;
+    const monsterCount = this.currentFloor === 10 ? 1 : 8;
     for (let i = 0; i < monsterCount; i++) {
       const type = monsterTypes[i % monsterTypes.length];
       const mDef = MONSTER_DEFINITIONS[type];

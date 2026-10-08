@@ -161,23 +161,18 @@ export class DungeonScene extends Phaser.Scene {
       .setStrokeStyle(2, 0xd7ccc8).setDepth(2);
     this.physics.add.existing(elevator, true);
 
-    this.add.text(500, 30, '昇降機 (3F/6F/9F)', {
+    this.add.text(500, 30, '昇降機 (最深部の手前)', {
       fontSize: '10px',
       color: '#ffffff',
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(3);
 
     this.physics.add.overlap(this.player, elevator, () => {
-      if (this.gameState.unlockedDungeonFloor >= 9) {
-        this.currentFloor = 9;
-      } else if (this.gameState.unlockedDungeonFloor >= 6) {
-        this.currentFloor = 6;
-      } else if (this.gameState.unlockedDungeonFloor >= 3) {
-        this.currentFloor = 3;
-      } else {
-        this.showFloatingMessage(500, 60, '昇降機は3F到達後に利用可能です');
+      if (this.gameState.unlockedDungeonFloor <= 1) {
+        this.showFloatingMessage(500, 60, 'まだ深層に到達していません');
         return;
       }
+      this.currentFloor = Math.max(1, this.gameState.unlockedDungeonFloor - 1);
       this.player.setPosition(100, height / 2);
       this.spawnFloorContents();
     });

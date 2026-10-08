@@ -140,7 +140,7 @@ export class IceCavernScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(3);
 
     this.physics.add.overlap(this.player, stairsDown, () => {
-      if (this.currentFloor < 5) {
+      if (this.currentFloor < 10) {
         this.currentFloor++;
         if (this.currentFloor > this.gameState.unlockedIceFloor) {
           this.gameState.unlockedIceFloor = this.currentFloor;
@@ -169,14 +169,11 @@ export class IceCavernScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(3);
 
     this.physics.add.overlap(this.player, elevator, () => {
-      if (this.gameState.unlockedIceFloor >= 4) {
-        this.currentFloor = 4;
-      } else if (this.gameState.unlockedIceFloor >= 2) {
-        this.currentFloor = 2;
-      } else {
-        this.showFloatingMessage(500, 60, '昇降機は2F到達後に利用可能です');
+      if (this.gameState.unlockedIceFloor <= 1) {
+        this.showFloatingMessage(500, 60, 'まだ深層に到達していません');
         return;
       }
+      this.currentFloor = Math.max(1, this.gameState.unlockedIceFloor - 1);
       this.player.setPosition(100, height / 2);
       this.spawnFloorContents();
     });
@@ -233,7 +230,7 @@ export class IceCavernScene extends Phaser.Scene {
       oreType = 'ore_adamantite';
     } else {
       themeName = 'クリスタルの祭壇 (B10 BOSS)';
-      monsterTypes = ['ice_golem', 'crystal_dragon'];
+      monsterTypes = ['crystal_dragon'];
       oreType = 'ore_adamantite';
     }
 
@@ -257,7 +254,7 @@ export class IceCavernScene extends Phaser.Scene {
     }
 
     // Spawn Monsters
-    const monsterCount = this.currentFloor === 10 ? 4 : 8;
+    const monsterCount = this.currentFloor === 10 ? 1 : 8;
     for (let i = 0; i < monsterCount; i++) {
       const type = monsterTypes[i % monsterTypes.length];
       const mDef = MONSTER_DEFINITIONS[type];

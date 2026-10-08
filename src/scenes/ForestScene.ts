@@ -224,7 +224,7 @@ export class ForestScene extends Phaser.Scene {
         break;
       case 5:
         areaName = 'エリア5: 原初の霊峰 (BOSS)';
-        monsterTypes = ['forest_golem', 'king_slime'];
+        monsterTypes = ['king_slime'];
         herbType = 'herb_world_tree';
         break;
     }
@@ -249,7 +249,7 @@ export class ForestScene extends Phaser.Scene {
     }
 
     // Spawn 8-10 monsters
-    const monsterCount = this.currentArea === 5 ? 5 : 8;
+    const monsterCount = this.currentArea === 5 ? 1 : 8;
     for (let i = 0; i < monsterCount; i++) {
       const type = monsterTypes[i % monsterTypes.length];
       const mDef = MONSTER_DEFINITIONS[type];

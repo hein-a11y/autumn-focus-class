@@ -32,6 +32,10 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
       this.setSize(180, 180);
       this.setOffset((237 - 180) / 2, 231 - 180); // Bottom center of the 237x231 sprite
       this.setScale(0.8); // Slightly scale down
+    } else if (def.id === 'volcano_dragon') {
+      this.setScale(1.2); 
+      this.setSize(180, 120);
+      this.setOffset((209 - 180) / 2, (146 - 120) / 2 + 10);
     } else {
       this.setSize(boxSize, boxSize);
     }
@@ -78,105 +82,7 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
 
         const isClose = dist < 65 + (this.displayWidth / 2);
         const targetSprite = target as unknown as Phaser.Physics.Arcade.Sprite;
-
-        // If target is close, boss considers AoE or Melee
-        if (isClose) {
-          if (time - (this as any).lastBossAoETime > 8000 || !(this as any).lastBossAoETime) {
-            (this as any).lastBossAoETime = time;
-            
-            // Boss AoE Animation (charge up effect)
-            this.scene.tweens.add({
-              targets: this,
-              scale: this.scaleX * 1.15,
-              yoyo: true,
-              duration: 200,
-              ease: 'Sine.easeInOut'
-            });
-
-            // Trigger AoE Knockback
-            const aoeRadius = 160;
-            const aoeCircle = this.scene.add.circle(this.x, this.y, aoeRadius, 0xff0000, 0.4).setDepth(19);
-            this.scene.tweens.add({
-              targets: aoeCircle,
-              scale: 1.5,
-              alpha: 0,
-              duration: 400,
-              onComplete: () => aoeCircle.destroy()
-            });
-
-            // Hit all nearby characters
-            const scene = this.scene as any;
-            const targetsToHit = [];
-            if (scene.player && Phaser.Math.Distance.Between(this.x, this.y, scene.player.x, scene.player.y) <= aoeRadius) {
-              targetsToHit.push(scene.player);
-            }
-            if (scene.companions) {
-              scene.companions.forEach((comp: any) => {
-                if (comp.companionData && comp.companionData.hp > 0 && Phaser.Math.Distance.Between(this.x, this.y, comp.x, comp.y) <= aoeRadius) {
-                  targetsToHit.push(comp);
-                }
-              });
-            }
-
-            targetsToHit.forEach(t => {
-              if (t.takeDamage) t.takeDamage(this.monsterDef.attack * 1.5);
-              const angleToT = Phaser.Math.Angle.Between(this.x, this.y, t.x, t.y);
-              this.scene.tweens.add({
-                targets: t,
-                x: t.x + Math.cos(angleToT) * 100,
-                y: t.y + Math.sin(angleToT) * 100,
-                duration: 200,
-                ease: 'Power2'
-              });
-            });
-
-          } else if (dist < 40 + (this.displayWidth / 2) && time - this.lastAttackTime > 1200) {
-            // Standard Melee if close
-            this.lastAttackTime = time;
-            target.takeDamage(this.monsterDef.attack);
-            
-            // Boss Melee Animation (Lunge)
-            this.scene.tweens.add({
-              targets: this,
-              x: this.x + Math.cos(angle) * 15,
-              y: this.y + Math.sin(angle) * 15,
-              yoyo: true,
-              duration: 100,
-              ease: 'Power2'
-            });
-
-            // Visual feedback for boss melee
-            const slash = this.scene.add.sprite(targetSprite.x, targetSprite.y, 'effect_slash').setDepth(20).setTint(0xff5555);
-            this.scene.tweens.add({ targets: slash, alpha: 0, scale: 1.5, duration: 150, onComplete: () => slash.destroy() });
-          }
-        } else {
-          // If not close, use ranged attack
-          if (time - this.lastAttackTime > 1500) {
-            this.lastAttackTime = time;
-            
-            // Boss Ranged Animation (Hop)
-            this.scene.tweens.add({
-              targets: this,
-              y: this.y - 15,
-              yoyo: true,
-              duration: 100,
-              ease: 'Power2'
-            });
-
-            const orb = this.scene.physics.add.sprite(this.x, this.y, 'effect_magic_orb').setDepth(20).setTint(0xff55ff);
-            const orbSpeed = 220;
-            orb.setVelocity(Math.cos(angle) * orbSpeed, Math.sin(angle) * orbSpeed);
-            
-            this.scene.physics.add.overlap(orb, targetSprite, (o, t) => {
-              target.takeDamage(this.monsterDef.attack);
-              orb.destroy();
-            });
-            
-            this.scene.time.delayedCall(2000, () => {
-              if (orb.active) orb.destroy();
-            });
-          }
-        }
+        this.handleBossCombat(time, targetSprite, dist, angle);
       } else {
         // Normal monster behavior: chase and melee
         this.setVelocity(
@@ -226,6 +132,260 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
+  private handleBossCombat(time: number, target: Phaser.Physics.Arcade.Sprite, dist: number, angle: number): void {
+    const isClose = dist < 65 + (this.displayWidth / 2);
+    
+    // Default cooldowns
+    const aoeCooldown = 8000;
+    const meleeCooldown = 1200;
+    const rangedCooldown = 1500;
+
+    // Define unique skills based on boss ID
+    switch (this.monsterDef.id) {
+      case 'king_slime':
+        this.handleKingSlimeCombat(time, target, dist, angle, isClose, aoeCooldown, meleeCooldown, rangedCooldown);
+        break;
+      case 'giant_spider':
+        this.handleGiantSpiderCombat(time, target, dist, angle, isClose, aoeCooldown, meleeCooldown, rangedCooldown);
+        break;
+      case 'volcano_dragon':
+        this.handleVolcanoDragonCombat(time, target, dist, angle, isClose, aoeCooldown, meleeCooldown, rangedCooldown);
+        break;
+      case 'crystal_dragon':
+        this.handleCrystalDragonCombat(time, target, dist, angle, isClose, aoeCooldown, meleeCooldown, rangedCooldown);
+        break;
+      case 'demon_lord':
+      default:
+        this.handleDemonLordCombat(time, target, dist, angle, isClose, aoeCooldown, meleeCooldown, rangedCooldown);
+        break;
+    }
+  }
+
+  private triggerAoE(radius: number, color: number, damageMult: number, knockbackDist: number): void {
+    this.scene.tweens.add({
+      targets: this,
+      scale: this.scaleX * 1.15,
+      yoyo: true,
+      duration: 200,
+      ease: 'Sine.easeInOut'
+    });
+
+    const aoeCircle = this.scene.add.circle(this.x, this.y, radius, color, 0.4).setDepth(19);
+    this.scene.tweens.add({
+      targets: aoeCircle,
+      scale: 1.5,
+      alpha: 0,
+      duration: 400,
+      onComplete: () => aoeCircle.destroy()
+    });
+
+    const scene = this.scene as any;
+    const targetsToHit = [];
+    if (scene.player && Phaser.Math.Distance.Between(this.x, this.y, scene.player.x, scene.player.y) <= radius) {
+      targetsToHit.push(scene.player);
+    }
+    if (scene.companions) {
+      scene.companions.forEach((comp: any) => {
+        if (comp.companionData && comp.companionData.hp > 0 && Phaser.Math.Distance.Between(this.x, this.y, comp.x, comp.y) <= radius) {
+          targetsToHit.push(comp);
+        }
+      });
+    }
+
+    targetsToHit.forEach(t => {
+      if (t.takeDamage) t.takeDamage(this.monsterDef.attack * damageMult);
+      const angleToT = Phaser.Math.Angle.Between(this.x, this.y, t.x, t.y);
+      this.scene.tweens.add({
+        targets: t,
+        x: t.x + Math.cos(angleToT) * knockbackDist,
+        y: t.y + Math.sin(angleToT) * knockbackDist,
+        duration: 200,
+        ease: 'Power2'
+      });
+    });
+  }
+
+  private performStandardMelee(time: number, target: Phaser.Physics.Arcade.Sprite, angle: number): void {
+    this.lastAttackTime = time;
+    (target as any).takeDamage(this.monsterDef.attack);
+    
+    this.scene.tweens.add({
+      targets: this,
+      x: this.x + Math.cos(angle) * 15,
+      y: this.y + Math.sin(angle) * 15,
+      yoyo: true,
+      duration: 100,
+      ease: 'Power2'
+    });
+
+    const slash = this.scene.add.sprite(target.x, target.y, 'effect_slash').setDepth(20).setTint(0xff5555);
+    this.scene.tweens.add({ targets: slash, alpha: 0, scale: 1.5, duration: 150, onComplete: () => slash.destroy() });
+  }
+
+  private performRangedAttack(time: number, target: Phaser.Physics.Arcade.Sprite, angle: number, color: number, speed: number, offsetAngle: number = 0): void {
+    this.lastAttackTime = time;
+    
+    this.scene.tweens.add({
+      targets: this,
+      y: this.y - 15,
+      yoyo: true,
+      duration: 100,
+      ease: 'Power2'
+    });
+
+    const orb = this.scene.physics.add.sprite(this.x, this.y, 'effect_magic_orb').setDepth(20).setTint(color);
+    const finalAngle = angle + offsetAngle;
+    orb.setVelocity(Math.cos(finalAngle) * speed, Math.sin(finalAngle) * speed);
+    
+    this.scene.physics.add.overlap(orb, target, (o, t) => {
+      (target as any).takeDamage(this.monsterDef.attack);
+      orb.destroy();
+    });
+    
+    this.scene.time.delayedCall(2000, () => {
+      if (orb.active) orb.destroy();
+    });
+  }
+
+  private handleKingSlimeCombat(time: number, target: Phaser.Physics.Arcade.Sprite, dist: number, angle: number, isClose: boolean, aoeCooldown: number, meleeCooldown: number, rangedCooldown: number): void {
+    // King Slime: Huge jump AoE
+    if (isClose) {
+      if (time - (this as any).lastBossAoETime > 6000 || !(this as any).lastBossAoETime) {
+        (this as any).lastBossAoETime = time;
+        // Jump high, then smash
+        this.scene.tweens.add({
+          targets: this,
+          y: this.y - 100,
+          scale: 1.2,
+          duration: 300,
+          yoyo: true,
+          ease: 'Sine.easeOut',
+          onComplete: () => {
+            this.triggerAoE(100 + (this.displayWidth / 2), 0x33cc66, 2.0, 150);
+          }
+        });
+      } else if (dist < 40 + (this.displayWidth / 2) && time - this.lastAttackTime > meleeCooldown) {
+        this.performStandardMelee(time, target, angle);
+      }
+    } else {
+      if (time - this.lastAttackTime > rangedCooldown) {
+        this.performRangedAttack(time, target, angle, 0x33cc66, 150);
+      }
+    }
+  }
+
+  private handleGiantSpiderCombat(time: number, target: Phaser.Physics.Arcade.Sprite, dist: number, angle: number, isClose: boolean, aoeCooldown: number, meleeCooldown: number, rangedCooldown: number): void {
+    // Giant Spider: Web Shot (fast, white, 3 projectiles)
+    if (isClose) {
+      if (time - (this as any).lastBossAoETime > 7000 || !(this as any).lastBossAoETime) {
+        (this as any).lastBossAoETime = time;
+        this.triggerAoE(85 + (this.displayWidth / 2), 0xdddddd, 1.2, 50);
+      } else if (dist < 40 + (this.displayWidth / 2) && time - this.lastAttackTime > meleeCooldown) {
+        this.performStandardMelee(time, target, angle);
+      }
+    } else {
+      if (time - this.lastAttackTime > rangedCooldown + 500) { // slower ranged but 3 shots
+        this.performRangedAttack(time, target, angle, 0xffffff, 250, -0.2);
+        this.performRangedAttack(time, target, angle, 0xffffff, 250, 0);
+        this.performRangedAttack(time, target, angle, 0xffffff, 250, 0.2);
+      }
+    }
+  }
+
+  private handleVolcanoDragonCombat(time: number, target: Phaser.Physics.Arcade.Sprite, dist: number, angle: number, isClose: boolean, aoeCooldown: number, meleeCooldown: number, rangedCooldown: number): void {
+    // Volcano Dragon: Fire Breath (cone of 5 projectiles) + Meteor Shower
+    
+    // Meteor Shower (Every 6 seconds)
+    if (time - (this as any).lastMeteorTime > 6000 || !(this as any).lastMeteorTime) {
+      (this as any).lastMeteorTime = time;
+      
+      // Spawn 4 warning circles near the player
+      for (let i = 0; i < 4; i++) {
+        const mx = target.x + Phaser.Math.Between(-150, 150);
+        const my = target.y + Phaser.Math.Between(-150, 150);
+        
+        const warning = this.scene.add.circle(mx, my, 40, 0xffaa00, 0.3).setDepth(15);
+        this.scene.tweens.add({
+          targets: warning,
+          alpha: 0.8,
+          scale: 1.2,
+          duration: 1000,
+          onComplete: () => {
+            warning.destroy();
+            // Explosion
+            const explosion = this.scene.add.circle(mx, my, 45, 0xff0000, 0.8).setDepth(21);
+            this.scene.tweens.add({
+              targets: explosion,
+              alpha: 0,
+              scale: 1.5,
+              duration: 300,
+              onComplete: () => explosion.destroy()
+            });
+
+            // Check damage
+            const scene = this.scene as any;
+            if (scene.player && Phaser.Math.Distance.Between(mx, my, scene.player.x, scene.player.y) <= 45) {
+              scene.player.takeDamage(this.monsterDef.attack * 2);
+            }
+            if (scene.companions) {
+              scene.companions.forEach((comp: any) => {
+                if (comp.companionData && comp.companionData.hp > 0 && Phaser.Math.Distance.Between(mx, my, comp.x, comp.y) <= 45) {
+                  comp.takeDamage(this.monsterDef.attack * 2);
+                }
+              });
+            }
+          }
+        });
+      }
+    }
+
+    if (isClose) {
+      if (time - (this as any).lastBossAoETime > 8000 || !(this as any).lastBossAoETime) {
+        (this as any).lastBossAoETime = time;
+        this.triggerAoE(120 + (this.displayWidth / 2), 0xff3300, 1.8, 120);
+      } else if (dist < 40 + (this.displayWidth / 2) && time - this.lastAttackTime > meleeCooldown) {
+        this.performStandardMelee(time, target, angle);
+      }
+    } else {
+      if (time - this.lastAttackTime > rangedCooldown) {
+        for (let i = -2; i <= 2; i++) {
+          this.performRangedAttack(time, target, angle, 0xff5500, 200, i * 0.15);
+        }
+      }
+    }
+  }
+
+  private handleCrystalDragonCombat(time: number, target: Phaser.Physics.Arcade.Sprite, dist: number, angle: number, isClose: boolean, aoeCooldown: number, meleeCooldown: number, rangedCooldown: number): void {
+    // Crystal Dragon: Fast ice shards
+    if (isClose) {
+      if (time - (this as any).lastBossAoETime > 9000 || !(this as any).lastBossAoETime) {
+        (this as any).lastBossAoETime = time;
+        this.triggerAoE(130 + (this.displayWidth / 2), 0x00ffff, 1.5, 80);
+      } else if (dist < 40 + (this.displayWidth / 2) && time - this.lastAttackTime > meleeCooldown - 200) {
+        this.performStandardMelee(time, target, angle);
+      }
+    } else {
+      if (time - this.lastAttackTime > rangedCooldown - 300) {
+        this.performRangedAttack(time, target, angle, 0x88ccff, 350); // very fast
+      }
+    }
+  }
+
+  private handleDemonLordCombat(time: number, target: Phaser.Physics.Arcade.Sprite, dist: number, angle: number, isClose: boolean, aoeCooldown: number, meleeCooldown: number, rangedCooldown: number): void {
+    // Demon Lord: Massive AoE, Dark Orb
+    if (isClose) {
+      if (time - (this as any).lastBossAoETime > 8000 || !(this as any).lastBossAoETime) {
+        (this as any).lastBossAoETime = time;
+        this.triggerAoE(160 + (this.displayWidth / 2), 0xff0000, 1.5, 100);
+      } else if (dist < 40 + (this.displayWidth / 2) && time - this.lastAttackTime > meleeCooldown) {
+        this.performStandardMelee(time, target, angle);
+      }
+    } else {
+      if (time - this.lastAttackTime > rangedCooldown) {
+        this.performRangedAttack(time, target, angle, 0xff55ff, 220);
+      }
+    }
+  }
   private handlePatrol(time: number): void {
     if (time > this.nextPatrolTime) {
       this.nextPatrolTime = time + Phaser.Math.Between(1500, 3500);

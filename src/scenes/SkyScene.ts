@@ -160,14 +160,11 @@ export class SkyScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(3);
 
     this.physics.add.overlap(this.player, elevator, () => {
-      if (this.gameState.unlockedSkyFloor >= 10) {
-        this.currentFloor = Math.floor(this.gameState.unlockedSkyFloor / 10) * 10;
-      } else if (this.gameState.unlockedSkyFloor >= 5) {
-        this.currentFloor = 5;
-      } else {
-        this.showFloatingMessage(500, 60, '昇降機は5F到達後に利用可能です');
+      if (this.gameState.unlockedSkyFloor <= 1) {
+        this.showFloatingMessage(500, 60, 'まだ深層に到達していません');
         return;
       }
+      this.currentFloor = Math.max(1, this.gameState.unlockedSkyFloor - 1);
       this.player.setPosition(100, height / 2);
       this.spawnFloorContents();
     });
