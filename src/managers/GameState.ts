@@ -1,3 +1,4 @@
+import { EQUIPMENT_DEFINITIONS } from "../data/equipment";
 import { ClassType, Gender, calculateStatsForLevel, EXP_TABLE } from '../data/classes';
 
 export interface CompanionData {
@@ -29,7 +30,12 @@ export interface PlayerData {
   attack: number;
   defense: number;
   speed: number;
+  baseAttack: number;
+  baseDefense: number;
+  baseSpeed: number;
   gold: number;
+  equippedWeapon: string | null;
+  equippedArmor: string | null;
 }
 
 export interface ActiveQuestProgress {
@@ -48,7 +54,11 @@ export class GameState {
 
   public unlockedForestArea: number = 1;
   public unlockedDungeonFloor: number = 1;
-  public levelCap: number = 10;
+  public unlockedVolcanoFloor: number = 1;
+  public unlockedIceFloor: number = 1;
+  public unlockedAbyssFloor: number = 1;
+  public unlockedSkyFloor: number = 1;
+  public levelCap: number = 50;
 
   public onStateChanged?: () => void;
 
@@ -80,7 +90,12 @@ export class GameState {
       attack: stats.attack,
       defense: stats.defense,
       speed: stats.speed,
-      gold: 150
+      baseAttack: stats.attack,
+      baseDefense: stats.defense,
+      baseSpeed: stats.speed,
+      gold: 150,
+      equippedWeapon: null,
+      equippedArmor: null
     };
   }
 
@@ -100,7 +115,12 @@ export class GameState {
       attack: stats.attack,
       defense: stats.defense,
       speed: stats.speed,
-      gold: 200
+      baseAttack: stats.attack,
+      baseDefense: stats.defense,
+      baseSpeed: stats.speed,
+      gold: 200,
+      equippedWeapon: null,
+      equippedArmor: null
     };
     this.inventory = {
       herb_small: 3
@@ -125,9 +145,10 @@ export class GameState {
         const newStats = calculateStatsForLevel(this.player.classType, this.player.level);
         this.player.maxHp = newStats.maxHp;
         this.player.maxMp = newStats.maxMp;
-        this.player.attack = newStats.attack;
-        this.player.defense = newStats.defense;
-        this.player.speed = newStats.speed;
+        this.player.baseAttack = newStats.attack;
+        this.player.baseDefense = newStats.defense;
+        this.player.baseSpeed = newStats.speed;
+        this.recalculatePlayerStats();
         this.player.hp = newStats.maxHp;
         this.player.mp = newStats.maxMp;
         leveledUp = true;
@@ -241,6 +262,10 @@ export class GameState {
         completedQuests: this.completedQuests,
         unlockedForestArea: this.unlockedForestArea,
         unlockedDungeonFloor: this.unlockedDungeonFloor,
+        unlockedVolcanoFloor: this.unlockedVolcanoFloor,
+        unlockedIceFloor: this.unlockedIceFloor,
+        unlockedAbyssFloor: this.unlockedAbyssFloor,
+        unlockedSkyFloor: this.unlockedSkyFloor,
         levelCap: this.levelCap
       };
       localStorage.setItem('frontline_save_data', JSON.stringify(data));
@@ -266,7 +291,22 @@ export class GameState {
         this.completedQuests = data.completedQuests || [];
         this.unlockedForestArea = data.unlockedForestArea || 1;
         this.unlockedDungeonFloor = data.unlockedDungeonFloor || 1;
-        this.levelCap = data.levelCap || 10;
+        this.unlockedVolcanoFloor = data.unlockedVolcanoFloor || 1;
+        this.unlockedIceFloor = data.unlockedIceFloor || 1;
+        this.unlockedAbyssFloor = data.unlockedAbyssFloor || 1;
+        this.unlockedSkyFloor = data.unlockedSkyFloor || 1;
+        this.levelCap = data.levelCap || 50;
+        
+        // Backwards compatibility for old saves
+        if (this.player.baseAttack === undefined) {
+          this.player.baseAttack = this.player.attack;
+          this.player.baseDefense = this.player.defense;
+          this.player.baseSpeed = this.player.speed;
+          this.player.equippedWeapon = null;
+          this.player.equippedArmor = null;
+        }
+        
+        this.recalculatePlayerStats();
         this.notifyChange();
         return true;
       }
@@ -274,6 +314,68 @@ export class GameState {
       console.warn('Failed to load from localStorage', e);
     }
     return false;
+  }
+
+  
+  public recalculatePlayerStats(): void {
+    let bonusAttack = 0;
+    let bonusDefense = 0;
+    let bonusSpeed = 0;
+
+    if (this.player.equippedWeapon) {
+      const wep = EQUIPMENT_DEFINITIONS[this.player.equippedWeapon];
+      if (wep) {
+        bonusAttack += wep.bonusAttack || 0;
+        bonusDefense += wep.bonusDefense || 0;
+        bonusSpeed += wep.bonusSpeed || 0;
+      }
+    }
+    if (this.player.equippedArmor) {
+      const arm = EQUIPMENT_DEFINITIONS[this.player.equippedArmor];
+      if (arm) {
+        bonusAttack += arm.bonusAttack || 0;
+        bonusDefense += arm.bonusDefense || 0;
+        bonusSpeed += arm.bonusSpeed || 0;
+      }
+    }
+
+    this.player.attack = this.player.baseAttack + bonusAttack;
+    this.player.defense = this.player.baseDefense + bonusDefense;
+    this.player.speed = this.player.baseSpeed + bonusSpeed;
+  }
+
+  public equipItem(itemId: string): void {
+    const def = EQUIPMENT_DEFINITIONS[itemId];
+    if (!def) return;
+    
+    // Unequip current
+    if (def.type === 'weapon' && this.player.equippedWeapon) {
+      this.addItem(this.player.equippedWeapon, 1);
+    }
+    if (def.type === 'armor' && this.player.equippedArmor) {
+      this.addItem(this.player.equippedArmor, 1);
+    }
+
+    // Equip new
+    this.removeItem(itemId, 1);
+    if (def.type === 'weapon') this.player.equippedWeapon = itemId;
+    if (def.type === 'armor') this.player.equippedArmor = itemId;
+
+    this.recalculatePlayerStats();
+    this.notifyChange();
+  }
+
+  public unequipItem(type: 'weapon' | 'armor'): void {
+    if (type === 'weapon' && this.player.equippedWeapon) {
+      this.addItem(this.player.equippedWeapon, 1);
+      this.player.equippedWeapon = null;
+    }
+    if (type === 'armor' && this.player.equippedArmor) {
+      this.addItem(this.player.equippedArmor, 1);
+      this.player.equippedArmor = null;
+    }
+    this.recalculatePlayerStats();
+    this.notifyChange();
   }
 
   private notifyChange(): void {

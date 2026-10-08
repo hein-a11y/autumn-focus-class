@@ -224,7 +224,7 @@ export class ForestScene extends Phaser.Scene {
         break;
       case 5:
         areaName = 'エリア5: 原初の霊峰 (BOSS)';
-        monsterTypes = ['forest_golem', 'chimera'];
+        monsterTypes = ['forest_golem', 'king_slime'];
         herbType = 'herb_world_tree';
         break;
     }

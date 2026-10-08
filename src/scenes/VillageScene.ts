@@ -1,3 +1,4 @@
+import { EQUIPMENT_DEFINITIONS } from "../data/equipment";
 import Phaser from 'phaser';
 import { Player } from '../entities/Player';
 import { Companion } from '../entities/Companion';
@@ -17,6 +18,7 @@ export class VillageScene extends Phaser.Scene {
   private activeModal: Phaser.GameObjects.Container | null = null;
   private interactPromptText!: Phaser.GameObjects.Text;
   private shopNpc!: Phaser.GameObjects.Rectangle;
+  private equipShopNpc!: Phaser.GameObjects.Rectangle;
 
   constructor() {
     super({ key: 'VillageScene' });
@@ -162,8 +164,67 @@ export class VillageScene extends Phaser.Scene {
       this.scene.start('ForestScene');
     });
 
-    this.physics.add.overlap(this.player, dungeonPortal, () => {
-      this.scene.start('DungeonScene');
+    this.physics.add.overlap(this.player, dungeonPortal, () => { this.scene.start('DungeonScene'); });
+
+    // --- Volcano Entrance (South-East) ---
+    const volcanoPortal = this.add.image(750, 480, 'dungeon_portal').setScale(0.12).setTint(0xff5555).setDepth(2);
+    this.physics.add.existing(volcanoPortal, true);
+    (volcanoPortal.body as Phaser.Physics.Arcade.StaticBody).setSize(120, 120);
+    this.add.text(750, 430, '溶岩洞窟\n(Lv11~) ▶', {
+      fontSize: '11px',
+      color: '#ff6666',
+      align: 'center',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(3);
+    
+    this.physics.add.overlap(this.player, volcanoPortal, () => {
+      this.scene.start('VolcanoScene');
+    });
+
+    // --- Ice Cavern Entrance (North-East) ---
+    const icePortal = this.add.image(750, 150, 'dungeon_portal').setScale(0.12).setTint(0x88ccff).setDepth(2);
+    this.physics.add.existing(icePortal, true);
+    (icePortal.body as Phaser.Physics.Arcade.StaticBody).setSize(120, 120);
+    this.add.text(750, 100, '氷結洞窟\n(Lv16~) ▶', {
+      fontSize: '11px',
+      color: '#88ccff',
+      align: 'center',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(3);
+    
+    this.physics.add.overlap(this.player, icePortal, () => {
+      this.scene.start('IceCavernScene');
+    });
+
+    // --- Abyss Entrance (Far North-East) ---
+    const abyssPortal = this.add.image(750, 40, 'dungeon_portal').setScale(0.12).setTint(0xa020f0).setDepth(2);
+    this.physics.add.existing(abyssPortal, true);
+    (abyssPortal.body as Phaser.Physics.Arcade.StaticBody).setSize(120, 120);
+    this.add.text(750, 80, '深淵への扉\n(Lv22~) ▶', {
+      fontSize: '11px',
+      color: '#d2b4de',
+      align: 'center',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(3);
+    
+    this.physics.add.overlap(this.player, abyssPortal, () => {
+      this.scene.start('AbyssScene');
+    });
+
+
+    // --- Sky Entrance (Center) ---
+    const skyPortal = this.add.image(80, 150, 'dungeon_portal').setScale(0.12).setTint(0xe0f7fa).setDepth(2);
+    this.physics.add.existing(skyPortal, true);
+    (skyPortal.body as Phaser.Physics.Arcade.StaticBody).setSize(120, 120);
+    this.add.text(80, 100, '天空の塔\n(無限) ◀', {
+      fontSize: '11px',
+      color: '#00bcd4',
+      align: 'center',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(3);
+    
+    this.physics.add.overlap(this.player, skyPortal, () => {
+      this.scene.start('SkyScene');
     });
 
     // Village Center Monument / Welcome
@@ -175,6 +236,17 @@ export class VillageScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(2);
 
     // --- Item Shop ---
+    
+    // --- Equip Shop ---
+    this.equipShopNpc = this.add.rectangle(200, 150, 24, 24, 0xe74c3c).setDepth(2);
+    this.physics.add.existing(this.equipShopNpc, true);
+    this.add.text(200, 120, '【武具屋】\n(話す)', {
+      fontSize: '11px',
+      color: '#e74c3c',
+      align: 'center',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(3);
+
     this.shopNpc = this.add.rectangle(600, 150, 24, 24, 0xff9800).setDepth(2);
     this.physics.add.existing(this.shopNpc, true);
     this.add.text(600, 120, '【道具屋】\n(話す)', {
@@ -271,6 +343,13 @@ export class VillageScene extends Phaser.Scene {
 
   private checkNearbyInteractables(): void {
     this.interactPromptText.setVisible(false);
+    
+    const distEquip = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.equipShopNpc.x, this.equipShopNpc.y);
+    if (distEquip < 50) {
+      this.interactPromptText.setText('[E] 武具屋で買い物をする');
+      this.interactPromptText.setPosition(this.player.x, this.player.y - 30);
+      this.interactPromptText.setVisible(true);
+    }
 
     const distShop = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.shopNpc.x, this.shopNpc.y);
     if (distShop < 50) {
@@ -281,10 +360,89 @@ export class VillageScene extends Phaser.Scene {
   }
 
   private checkInteractions(): void {
+    const distEquip = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.equipShopNpc.x, this.equipShopNpc.y);
+    if (distEquip < 50) {
+      this.openEquipShop();
+      return;
+    }
+
     const distShop = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.shopNpc.x, this.shopNpc.y);
     if (distShop < 50) {
       this.openItemShop();
     }
+  }
+
+  
+  private openEquipShop(): void {
+    if (this.activeModal) return;
+
+    this.activeModal = this.add.container(400, 300).setScrollFactor(0).setDepth(200);
+
+    const bg = this.add.rectangle(0, 0, 540, 500, 0x111625, 0.95)
+      .setStrokeStyle(2, 0xe74c3c);
+    this.activeModal.add(bg);
+
+    const title = this.add.text(0, -230, '【武具屋】', {
+      fontSize: '18px',
+      color: '#e74c3c',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.activeModal.add(title);
+
+    const getStatusText = () => {
+      const p = this.gameState.player;
+      const wName = p.equippedWeapon ? EQUIPMENT_DEFINITIONS[p.equippedWeapon]?.name : 'なし';
+      const aName = p.equippedArmor ? EQUIPMENT_DEFINITIONS[p.equippedArmor]?.name : 'なし';
+      return `所持金: ${p.gold} G\n攻撃力: ${p.attack} | 防御力: ${p.defense}\n装備武器: ${wName}\n装備防具: ${aName}`;
+    };
+
+    const desc = this.add.text(0, -180, getStatusText(), {
+      fontSize: '12px',
+      color: '#ffffff',
+      align: 'center',
+      lineSpacing: 4
+    }).setOrigin(0.5);
+    this.activeModal.add(desc);
+
+    const resultMsg = this.add.text(0, -120, '装備品を購入すると自動で装備されます', {
+      fontSize: '12px',
+      color: '#ffff00',
+      align: 'center'
+    }).setOrigin(0.5);
+    this.activeModal.add(resultMsg);
+
+    const equips = Object.values(EQUIPMENT_DEFINITIONS);
+    let yPos = -70;
+    
+    // Split into two columns
+    equips.forEach((eq, idx) => {
+      const col = idx % 2;
+      const row = Math.floor(idx / 2);
+      const xPos = col === 0 ? -130 : 130;
+      const curY = yPos + row * 55;
+
+      const btn = this.add.rectangle(xPos, curY, 240, 50, 0x3d4461).setInteractive({ useHandCursor: true });
+      const txt = this.add.text(xPos, curY, `${eq.name} (${eq.price}G)\n${eq.type === 'weapon' ? '攻+'+eq.bonusAttack : '防+'+eq.bonusDefense}`, { fontSize: '11px', color: '#fff', align: 'center' }).setOrigin(0.5);
+      
+      btn.on('pointerdown', () => {
+        if (this.gameState.spendGold(eq.price)) {
+          this.gameState.addItem(eq.id, 1);
+          this.gameState.equipItem(eq.id);
+          desc.setText(getStatusText());
+          resultMsg.setText(`${eq.name} を購入し装備しました！`);
+        } else {
+          resultMsg.setText('ゴールドが足りません！');
+        }
+      });
+      this.activeModal?.add([btn, txt]);
+    });
+
+    const closeBtn = this.add.rectangle(0, 220, 120, 30, 0x555555).setInteractive({ useHandCursor: true });
+    const closeTxt = this.add.text(0, 220, '閉じる (ESC)', { fontSize: '12px', color: '#fff' }).setOrigin(0.5);
+    closeBtn.on('pointerdown', () => {
+      this.time.delayedCall(10, () => this.closeModal());
+    });
+    this.activeModal.add([closeBtn, closeTxt]);
   }
 
   private openItemShop(): void {

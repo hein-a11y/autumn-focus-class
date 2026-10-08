@@ -14,7 +14,7 @@ interface OreNode {
   isMined: boolean;
 }
 
-export class DungeonScene extends Phaser.Scene {
+export class SkyScene extends Phaser.Scene {
   private player!: Player;
   private companions: Companion[] = [];
   private monsters: Monster[] = [];
@@ -31,7 +31,7 @@ export class DungeonScene extends Phaser.Scene {
   private projectiles!: Phaser.Physics.Arcade.Group;
 
   constructor() {
-    super({ key: 'DungeonScene' });
+    super({ key: 'SkyScene' });
     this.gameState = GameState.getInstance();
     this.questManager = QuestManager.getInstance();
   }
@@ -40,7 +40,7 @@ export class DungeonScene extends Phaser.Scene {
     const width = 1000;
     const height = 800;
 
-    this.currentFloor = Math.min(this.gameState.unlockedDungeonFloor, 1);
+    this.currentFloor = Math.min(this.gameState.unlockedSkyFloor, 1);
 
     this.projectiles = this.physics.add.group();
 
@@ -101,14 +101,14 @@ export class DungeonScene extends Phaser.Scene {
     // Floor tiles
     for (let x = 0; x < width; x += 16) {
       for (let y = 0; y < height; y += 16) {
-        this.add.image(x + 8, y + 8, 'tile_dungeon_floor').setDepth(0);
+        this.add.rectangle(x + 8, y + 8, 16, 16, 0xe0f7fa).setDepth(0);
       }
     }
 
     // Border walls
     for (let x = 0; x < width; x += 16) {
-      this.add.image(x + 8, 8, 'tile_dungeon_wall').setDepth(1);
-      this.add.image(x + 8, height - 8, 'tile_dungeon_wall').setDepth(1);
+      this.add.rectangle(x + 8, 8, 16, 16, 0xffffff).setDepth(1);
+      this.add.rectangle(x + 8, height - 8, 16, 16, 0xffffff).setDepth(1);
     }
 
     // Portal back to Village (West)
@@ -140,42 +140,32 @@ export class DungeonScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(3);
 
     this.physics.add.overlap(this.player, stairsDown, () => {
-      if (this.currentFloor < 10) {
-        this.currentFloor++;
-        if (this.currentFloor > this.gameState.unlockedDungeonFloor) {
-          this.gameState.unlockedDungeonFloor = this.currentFloor;
-        }
-        this.player.setPosition(100, height / 2);
-        this.spawnFloorContents();
-      } else {
-        // Abyss completed
-        this.showFloatingMessage(this.player.x, this.player.y - 20, '★ 最深部を踏破！ ★', '#ffcc00');
-        this.currentFloor = 1;
-        this.player.setPosition(100, height / 2);
-        this.spawnFloorContents();
+      this.currentFloor++;
+      if (this.currentFloor > this.gameState.unlockedSkyFloor) {
+        this.gameState.unlockedSkyFloor = this.currentFloor;
       }
+      this.player.setPosition(100, height / 2);
+      this.spawnFloorContents();
     });
 
-    // Elevator shortcut station (North center) - unlocked at floor 3, 6, 9
+    // Elevator shortcut station (North center)
     const elevator = this.add.rectangle(500, 30, 90, 40, 0x795548, 0.9)
       .setStrokeStyle(2, 0xd7ccc8).setDepth(2);
     this.physics.add.existing(elevator, true);
 
-    this.add.text(500, 30, '昇降機 (3F/6F/9F)', {
+    this.add.text(500, 30, '昇降機', {
       fontSize: '10px',
       color: '#ffffff',
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(3);
 
     this.physics.add.overlap(this.player, elevator, () => {
-      if (this.gameState.unlockedDungeonFloor >= 9) {
-        this.currentFloor = 9;
-      } else if (this.gameState.unlockedDungeonFloor >= 6) {
-        this.currentFloor = 6;
-      } else if (this.gameState.unlockedDungeonFloor >= 3) {
-        this.currentFloor = 3;
+      if (this.gameState.unlockedSkyFloor >= 10) {
+        this.currentFloor = Math.floor(this.gameState.unlockedSkyFloor / 10) * 10;
+      } else if (this.gameState.unlockedSkyFloor >= 5) {
+        this.currentFloor = 5;
       } else {
-        this.showFloatingMessage(500, 60, '昇降機は3F到達後に利用可能です');
+        this.showFloatingMessage(500, 60, '昇降機は5F到達後に利用可能です');
         return;
       }
       this.player.setPosition(100, height / 2);
@@ -207,65 +197,47 @@ export class DungeonScene extends Phaser.Scene {
     this.oreNodes.forEach(n => n.sprite.destroy());
     this.oreNodes = [];
 
-    let monsterTypes: string[] = [];
-    let oreType = 'ore_copper';
-    let themeName = '';
-
-    if (this.currentFloor <= 2) {
-      themeName = '上層洞窟 (B1-B2)';
-      monsterTypes = ['bat', 'green_slime'];
-      oreType = 'ore_copper';
-    } else if (this.currentFloor <= 4) {
-      themeName = '廃鉱山 (B3-B4)';
-      monsterTypes = ['skeleton', 'cave_spider'];
-      oreType = 'ore_iron';
-    } else if (this.currentFloor <= 6) {
-      themeName = '深層大洞窟 (B5-B6)';
-      monsterTypes = ['stone_golem', 'dark_bat'];
-      oreType = 'ore_silver';
-    } else if (this.currentFloor <= 8) {
-      themeName = '溶岩洞 (B7-B8)';
-      monsterTypes = ['fire_elemental', 'hellhound'];
-      oreType = 'ore_gold';
-    } else if (this.currentFloor === 9) {
-      themeName = '奈落の深部 (B9)';
-      monsterTypes = ['shadow_knight', 'hellhound'];
-      oreType = 'ore_mithril';
-    } else {
-      themeName = '奈落のコア (B10 BOSS)';
-      monsterTypes = ['shadow_knight', 'giant_spider'];
-      oreType = 'ore_adamantite';
-    }
-
+    const isBossFloor = this.currentFloor % 5 === 0;
+    const themeName = isBossFloor ? '天空の試練 (BOSS)' : '天空の階層';
+    
     if (this.floorText) {
-      this.floorText.setText(`【ダンジョン】 B${this.currentFloor}F: ${themeName}`);
+      this.floorText.setText(`【天空の塔】 ${this.currentFloor}F: ${themeName}`);
     }
 
-    // Spawn Ore Nodes
-    const oreCount = 6;
+    const oreType = 'ore_adamantite';
+    const oreCount = 4;
     for (let i = 0; i < oreCount; i++) {
       const ox = Phaser.Math.Between(180, 850);
       const oy = Phaser.Math.Between(100, 700);
       const sprite = this.add.sprite(ox, oy, `node_${oreType}`).setScale(1.5).setDepth(4);
       const itemDef = ITEM_DEFINITIONS[oreType];
-      this.oreNodes.push({
-        sprite,
-        itemId: oreType,
-        itemName: itemDef ? itemDef.name : '鉱石',
-        isMined: false
-      });
+      this.oreNodes.push({ sprite, itemId: oreType, itemName: itemDef ? itemDef.name : '鉱石', isMined: false });
     }
 
-    // Spawn Monsters
-    const monsterCount = this.currentFloor === 10 ? 4 : 8;
-    for (let i = 0; i < monsterCount; i++) {
-      const type = monsterTypes[i % monsterTypes.length];
-      const mDef = MONSTER_DEFINITIONS[type];
-      if (mDef) {
-        const mx = Phaser.Math.Between(260, 900);
-        const my = Phaser.Math.Between(120, 680);
-        const monster = new Monster(this, mx, my, mDef);
-        this.monsters.push(monster);
+    const normalPool = ['horned_rabbit', 'giant_bee', 'dark_bat', 'hellhound', 'abyss_crawler', 'void_walker', 'shadow_knight'];
+    const bossPool = ['giant_spider', 'volcano_dragon', 'crystal_dragon', 'demon_lord'];
+    
+    // Scale stats based on floor
+    const multiplier = 1 + (this.currentFloor * 0.15);
+    
+    if (isBossFloor) {
+      const baseDef = MONSTER_DEFINITIONS[bossPool[Math.floor(Math.random() * bossPool.length)]];
+      if (baseDef) {
+        const dynamicDef = { ...baseDef, maxHp: Math.floor(baseDef.maxHp * multiplier), attack: Math.floor(baseDef.attack * multiplier), defense: Math.floor(baseDef.defense * multiplier), exp: Math.floor(baseDef.exp * multiplier), gold: Math.floor(baseDef.gold * multiplier) };
+        const mx = Phaser.Math.Between(500, 800);
+        const my = Phaser.Math.Between(300, 500);
+        this.monsters.push(new Monster(this, mx, my, dynamicDef));
+      }
+    } else {
+      const monsterCount = 8;
+      for (let i = 0; i < monsterCount; i++) {
+        const baseDef = MONSTER_DEFINITIONS[normalPool[Math.floor(Math.random() * normalPool.length)]];
+        if (baseDef) {
+          const dynamicDef = { ...baseDef, maxHp: Math.floor(baseDef.maxHp * multiplier), attack: Math.floor(baseDef.attack * multiplier), defense: Math.floor(baseDef.defense * multiplier), exp: Math.floor(baseDef.exp * multiplier), gold: Math.floor(baseDef.gold * multiplier) };
+          const mx = Phaser.Math.Between(260, 900);
+          const my = Phaser.Math.Between(120, 680);
+          this.monsters.push(new Monster(this, mx, my, dynamicDef));
+        }
       }
     }
   }
@@ -361,7 +333,7 @@ export class DungeonScene extends Phaser.Scene {
         this.showFloatingMessage(this.player.x, this.player.y - 30, '★ レベルアップ！ ★', '#ffff00');
       }
 
-      if (data.def.id === 'giant_spider') {
+      if (data.def.id === 'dungeon_boss') {
         this.showFloatingMessage(this.player.x, this.player.y - 50, '★ ダンジョンボス討伐達成！ ★', '#00ffcc');
       }
     });

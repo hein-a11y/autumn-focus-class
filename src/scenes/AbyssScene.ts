@@ -14,7 +14,7 @@ interface OreNode {
   isMined: boolean;
 }
 
-export class DungeonScene extends Phaser.Scene {
+export class AbyssScene extends Phaser.Scene {
   private player!: Player;
   private companions: Companion[] = [];
   private monsters: Monster[] = [];
@@ -31,7 +31,7 @@ export class DungeonScene extends Phaser.Scene {
   private projectiles!: Phaser.Physics.Arcade.Group;
 
   constructor() {
-    super({ key: 'DungeonScene' });
+    super({ key: 'AbyssScene' });
     this.gameState = GameState.getInstance();
     this.questManager = QuestManager.getInstance();
   }
@@ -40,7 +40,7 @@ export class DungeonScene extends Phaser.Scene {
     const width = 1000;
     const height = 800;
 
-    this.currentFloor = Math.min(this.gameState.unlockedDungeonFloor, 1);
+    this.currentFloor = Math.min(this.gameState.unlockedAbyssFloor, 1);
 
     this.projectiles = this.physics.add.group();
 
@@ -101,14 +101,14 @@ export class DungeonScene extends Phaser.Scene {
     // Floor tiles
     for (let x = 0; x < width; x += 16) {
       for (let y = 0; y < height; y += 16) {
-        this.add.image(x + 8, y + 8, 'tile_dungeon_floor').setDepth(0);
+        this.add.rectangle(x + 8, y + 8, 16, 16, 0x1a1a24).setDepth(0);
       }
     }
 
     // Border walls
     for (let x = 0; x < width; x += 16) {
-      this.add.image(x + 8, 8, 'tile_dungeon_wall').setDepth(1);
-      this.add.image(x + 8, height - 8, 'tile_dungeon_wall').setDepth(1);
+      this.add.rectangle(x + 8, 8, 16, 16, 0x0d0d12).setDepth(1);
+      this.add.rectangle(x + 8, height - 8, 16, 16, 0x0d0d12).setDepth(1);
     }
 
     // Portal back to Village (West)
@@ -140,10 +140,10 @@ export class DungeonScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(3);
 
     this.physics.add.overlap(this.player, stairsDown, () => {
-      if (this.currentFloor < 10) {
+      if (this.currentFloor < 5) {
         this.currentFloor++;
-        if (this.currentFloor > this.gameState.unlockedDungeonFloor) {
-          this.gameState.unlockedDungeonFloor = this.currentFloor;
+        if (this.currentFloor > this.gameState.unlockedAbyssFloor) {
+          this.gameState.unlockedAbyssFloor = this.currentFloor;
         }
         this.player.setPosition(100, height / 2);
         this.spawnFloorContents();
@@ -157,30 +157,30 @@ export class DungeonScene extends Phaser.Scene {
     });
 
     // Elevator shortcut station (North center) - unlocked at floor 3, 6, 9
+    
     const elevator = this.add.rectangle(500, 30, 90, 40, 0x795548, 0.9)
       .setStrokeStyle(2, 0xd7ccc8).setDepth(2);
     this.physics.add.existing(elevator, true);
 
-    this.add.text(500, 30, '昇降機 (3F/6F/9F)', {
+    this.add.text(500, 30, '昇降機 (2F/4F)', {
       fontSize: '10px',
       color: '#ffffff',
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(3);
 
     this.physics.add.overlap(this.player, elevator, () => {
-      if (this.gameState.unlockedDungeonFloor >= 9) {
-        this.currentFloor = 9;
-      } else if (this.gameState.unlockedDungeonFloor >= 6) {
-        this.currentFloor = 6;
-      } else if (this.gameState.unlockedDungeonFloor >= 3) {
-        this.currentFloor = 3;
+      if (this.gameState.unlockedAbyssFloor >= 4) {
+        this.currentFloor = 4;
+      } else if (this.gameState.unlockedAbyssFloor >= 2) {
+        this.currentFloor = 2;
       } else {
-        this.showFloatingMessage(500, 60, '昇降機は3F到達後に利用可能です');
+        this.showFloatingMessage(500, 60, '昇降機は2F到達後に利用可能です');
         return;
       }
       this.player.setPosition(100, height / 2);
       this.spawnFloorContents();
     });
+
   }
 
   private spawnCompanions(): void {
@@ -212,28 +212,28 @@ export class DungeonScene extends Phaser.Scene {
     let themeName = '';
 
     if (this.currentFloor <= 2) {
-      themeName = '上層洞窟 (B1-B2)';
-      monsterTypes = ['bat', 'green_slime'];
-      oreType = 'ore_copper';
+      themeName = '深淵の入り口 (B1-B2)';
+      monsterTypes = ['abyss_crawler', 'void_walker'];
+      oreType = 'ore_adamantite';
     } else if (this.currentFloor <= 4) {
-      themeName = '廃鉱山 (B3-B4)';
-      monsterTypes = ['skeleton', 'cave_spider'];
-      oreType = 'ore_iron';
+      themeName = '混沌の回廊 (B3-B4)';
+      monsterTypes = ['void_walker', 'chaos_knight'];
+      oreType = 'ore_adamantite';
     } else if (this.currentFloor <= 6) {
-      themeName = '深層大洞窟 (B5-B6)';
-      monsterTypes = ['stone_golem', 'dark_bat'];
-      oreType = 'ore_silver';
+      themeName = '虚無の層 (B5-B6)';
+      monsterTypes = ['chaos_knight', 'abyss_dragon'];
+      oreType = 'ore_adamantite';
     } else if (this.currentFloor <= 8) {
-      themeName = '溶岩洞 (B7-B8)';
-      monsterTypes = ['fire_elemental', 'hellhound'];
-      oreType = 'ore_gold';
+      themeName = '絶望の淵 (B7-B8)';
+      monsterTypes = ['abyss_dragon', 'abyss_crawler'];
+      oreType = 'ore_adamantite';
     } else if (this.currentFloor === 9) {
-      themeName = '奈落の深部 (B9)';
-      monsterTypes = ['shadow_knight', 'hellhound'];
-      oreType = 'ore_mithril';
+      themeName = '魔界門 (B9)';
+      monsterTypes = ['chaos_knight', 'abyss_dragon'];
+      oreType = 'ore_adamantite';
     } else {
-      themeName = '奈落のコア (B10 BOSS)';
-      monsterTypes = ['shadow_knight', 'giant_spider'];
+      themeName = '魔王の玉座 (B10 BOSS)';
+      monsterTypes = ['chaos_knight', 'demon_lord'];
       oreType = 'ore_adamantite';
     }
 
@@ -361,7 +361,7 @@ export class DungeonScene extends Phaser.Scene {
         this.showFloatingMessage(this.player.x, this.player.y - 30, '★ レベルアップ！ ★', '#ffff00');
       }
 
-      if (data.def.id === 'giant_spider') {
+      if (data.def.id === 'dungeon_boss') {
         this.showFloatingMessage(this.player.x, this.player.y - 50, '★ ダンジョンボス討伐達成！ ★', '#00ffcc');
       }
     });

@@ -4,8 +4,12 @@ import { CharacterSelectScene } from './scenes/CharacterSelectScene';
 import { VillageScene } from './scenes/VillageScene';
 import { ForestScene } from './scenes/ForestScene';
 import { DungeonScene } from './scenes/DungeonScene';
+import { VolcanoScene } from './scenes/VolcanoScene';
 import { HomeScene } from './scenes/HomeScene';
 import { TavernScene } from './scenes/TavernScene';
+import { IceCavernScene } from './scenes/IceCavernScene';
+import { AbyssScene } from './scenes/AbyssScene';
+import { SkyScene } from './scenes/SkyScene';
 
 export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -32,6 +36,10 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     HomeScene,
     TavernScene,
     ForestScene,
-    DungeonScene
+    DungeonScene,
+    VolcanoScene,
+    IceCavernScene,
+    AbyssScene,
+    SkyScene
   ]
 };
