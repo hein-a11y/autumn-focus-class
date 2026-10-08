@@ -143,18 +143,21 @@ export class CharacterSelectScene extends Phaser.Scene {
     });
 
     // --- Start Button ---
-    const startBtn = this.add.rectangle(width / 2, 530, 240, 48, 0x27ae60)
+    const gameState = GameState.getInstance();
+    const hasSave = gameState.hasSaveData();
+    const startBtnY = hasSave ? 500 : 530;
+
+    const startBtn = this.add.rectangle(width / 2, startBtnY, 240, 48, 0x27ae60)
       .setInteractive({ useHandCursor: true })
       .setStrokeStyle(2, 0x2ecc71);
 
-    const startText = this.add.text(width / 2, 530, '最前線の村へ出発！ ▶ (Enter)', {
+    const startText = this.add.text(width / 2, startBtnY, 'はじめから (Enter)', {
       fontSize: '16px',
       color: '#ffffff',
       fontStyle: 'bold'
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     const startGame = () => {
-      const gameState = GameState.getInstance();
       gameState.initCharacter(this.selectedGender, this.selectedClass);
       this.scene.start('VillageScene');
     };
@@ -164,8 +167,36 @@ export class CharacterSelectScene extends Phaser.Scene {
     startBtn.on('pointerdown', startGame);
     startText.on('pointerdown', startGame);
 
+    if (hasSave) {
+      const continueBtn = this.add.rectangle(width / 2, 560, 240, 48, 0x2980b9)
+        .setInteractive({ useHandCursor: true })
+        .setStrokeStyle(2, 0x3498db);
+
+      const continueText = this.add.text(width / 2, 560, '続きから (Space)', {
+        fontSize: '16px',
+        color: '#ffffff',
+        fontStyle: 'bold'
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+      const continueGame = () => {
+        if (gameState.loadFromStorage()) {
+          this.scene.start('VillageScene');
+        } else {
+          // Fallback if loading fails
+          startGame();
+        }
+      };
+
+      continueBtn.on('pointerover', () => continueBtn.setFillStyle(0x3498db));
+      continueBtn.on('pointerout', () => continueBtn.setFillStyle(0x2980b9));
+      continueBtn.on('pointerdown', continueGame);
+      continueText.on('pointerdown', continueGame);
+      this.input.keyboard?.on('keydown-SPACE', continueGame);
+    } else {
+      this.input.keyboard?.on('keydown-SPACE', startGame);
+    }
+
     this.input.keyboard?.on('keydown-ENTER', startGame);
-    this.input.keyboard?.on('keydown-SPACE', startGame);
 
     this.updateSelections();
   }

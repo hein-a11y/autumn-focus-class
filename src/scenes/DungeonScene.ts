@@ -67,7 +67,7 @@ export class DungeonScene extends Phaser.Scene {
     this.player.update(time);
 
     for (const comp of this.companions) {
-      comp.update(time, this.monsters);
+      comp.update(time, this.monsters, this.oreNodes);
     }
 
     for (let i = this.monsters.length - 1; i >= 0; i--) {
@@ -186,9 +186,17 @@ export class DungeonScene extends Phaser.Scene {
   private spawnCompanions(): void {
     this.companions.forEach(c => c.destroy());
     this.companions = [];
+    const offsets = [
+      { x: -28, y: 0 },
+      { x: 28, y: 0 },
+      { x: 0, y: -28 },
+      { x: 0, y: 28 },
+      { x: -28, y: -28 },
+      { x: 28, y: -28 }
+    ];
     this.gameState.recruitedCompanions.forEach((data, index) => {
-      const offsetX = index === 0 ? -24 : 24;
-      const comp = new Companion(this, this.player.x + offsetX, this.player.y + 16, data, this.player);
+      const off = offsets[index % offsets.length];
+      const comp = new Companion(this, this.player.x + off.x, this.player.y + off.y, data, this.player);
       this.companions.push(comp);
     });
   }
@@ -225,7 +233,7 @@ export class DungeonScene extends Phaser.Scene {
       oreType = 'ore_mithril';
     } else {
       themeName = '奈落のコア (B10 BOSS)';
-      monsterTypes = ['shadow_knight', 'dungeon_boss'];
+      monsterTypes = ['shadow_knight', 'giant_spider'];
       oreType = 'ore_adamantite';
     }
 
@@ -353,8 +361,20 @@ export class DungeonScene extends Phaser.Scene {
         this.showFloatingMessage(this.player.x, this.player.y - 30, '★ レベルアップ！ ★', '#ffff00');
       }
 
-      if (data.def.id === 'dungeon_boss') {
+      if (data.def.id === 'giant_spider') {
         this.showFloatingMessage(this.player.x, this.player.y - 50, '★ ダンジョンボス討伐達成！ ★', '#00ffcc');
+      }
+    });
+
+    // Companion gather
+    this.events.on('companion-gather', (data: { companion: Companion; node: any }) => {
+      const node = data.node;
+      if (!node.isMined) {
+        node.isMined = true;
+        node.sprite.setAlpha(0.25);
+        this.gameState.addItem(node.itemId, 1);
+        this.questManager.recordGather(node.itemId, 1);
+        this.showFloatingMessage(data.companion.x, data.companion.y - 10, `+1 ${node.itemName}`);
       }
     });
 

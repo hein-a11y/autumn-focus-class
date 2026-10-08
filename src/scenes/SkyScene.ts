@@ -7,31 +7,31 @@ import { QuestManager } from '../managers/QuestManager';
 import { MONSTER_DEFINITIONS, MonsterDefinition } from '../data/monsters';
 import { ITEM_DEFINITIONS } from '../data/items';
 
-interface ResourceNode {
+interface OreNode {
   sprite: Phaser.GameObjects.Sprite;
   itemId: string;
   itemName: string;
-  isHarvested: boolean;
+  isMined: boolean;
 }
 
-export class ForestScene extends Phaser.Scene {
+export class SkyScene extends Phaser.Scene {
   private player!: Player;
   private companions: Companion[] = [];
   private monsters: Monster[] = [];
-  private resourceNodes: ResourceNode[] = [];
-  private currentArea: number = 1;
+  private oreNodes: OreNode[] = [];
+  private currentFloor: number = 1;
 
   private gameState: GameState;
   private questManager: QuestManager;
 
   private hudText!: Phaser.GameObjects.Text;
-  private areaText!: Phaser.GameObjects.Text;
+  private floorText!: Phaser.GameObjects.Text;
   private promptText!: Phaser.GameObjects.Text;
 
   private projectiles!: Phaser.Physics.Arcade.Group;
 
   constructor() {
-    super({ key: 'ForestScene' });
+    super({ key: 'SkyScene' });
     this.gameState = GameState.getInstance();
     this.questManager = QuestManager.getInstance();
   }
@@ -40,49 +40,36 @@ export class ForestScene extends Phaser.Scene {
     const width = 1000;
     const height = 800;
 
-    this.currentArea = this.gameState.unlockedForestArea;
+    this.currentFloor = Math.min(this.gameState.unlockedSkyFloor, 1);
 
-    // Projectile physics group
     this.projectiles = this.physics.add.group();
 
-    // Spawn Player
     this.player = new Player(this, 100, height / 2);
 
-    // Create Forest Environment
-    this.createForestMap(width, height);
-
-    // Spawn Companions
+    this.createDungeonMap(width, height);
     this.spawnCompanions();
 
-    // Camera follow
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.setBounds(0, 0, width, height);
     this.physics.world.setBounds(0, 0, width, height);
 
-    // Setup Combat Event Listeners
     this.setupCombatEvents();
-
-    // Create HUD
     this.createHUD();
 
-    // Spawn Monsters & Resource Nodes for current area
-    this.spawnAreaContents();
+    this.spawnFloorContents();
 
-    // Key input for harvesting
     this.input.keyboard?.on('keydown-E', () => {
-      this.checkHarvest();
+      this.checkMining();
     });
   }
 
   public update(time: number): void {
     this.player.update(time);
 
-    // Update companions with nearby monsters
     for (const comp of this.companions) {
-      comp.update(time, this.monsters, this.resourceNodes);
+      comp.update(time, this.monsters, this.oreNodes);
     }
 
-    // Update monsters with closest target (player or companion)
     for (let i = this.monsters.length - 1; i >= 0; i--) {
       const monster = this.monsters[i];
       if (!monster.isAlive()) {
@@ -90,7 +77,6 @@ export class ForestScene extends Phaser.Scene {
         continue;
       }
 
-      // Pick target
       let target: { x: number; y: number; takeDamage: (d: number) => void } = this.player;
       let minDist = Phaser.Math.Distance.Between(monster.x, monster.y, this.player.x, this.player.y);
 
@@ -108,30 +94,29 @@ export class ForestScene extends Phaser.Scene {
     }
 
     this.updateHUD();
-    this.checkHarvestPrompt();
+    this.checkMiningPrompt();
   }
 
-  private createForestMap(width: number, height: number): void {
-    // Fill with grass tiles
+  private createDungeonMap(width: number, height: number): void {
+    // Floor tiles
     for (let x = 0; x < width; x += 16) {
       for (let y = 0; y < height; y += 16) {
-        this.add.image(x + 8, y + 8, 'tile_grass').setDepth(0);
+        this.add.rectangle(x + 8, y + 8, 16, 16, 0xe0f7fa).setDepth(0);
       }
     }
 
-    // Dirt trail winding through forest
+    // Border walls
     for (let x = 0; x < width; x += 16) {
-      const yOffset = Math.sin(x * 0.01) * 60 + height / 2;
-      this.add.image(x + 8, yOffset, 'tile_dirt').setDepth(1);
-      this.add.image(x + 8, yOffset + 16, 'tile_dirt').setDepth(1);
+      this.add.rectangle(x + 8, 8, 16, 16, 0xffffff).setDepth(1);
+      this.add.rectangle(x + 8, height - 8, 16, 16, 0xffffff).setDepth(1);
     }
 
-    // Return to Village portal on West
-    const returnPortal = this.add.rectangle(30, height / 2, 40, 80, 0x1565c0, 0.7)
-      .setStrokeStyle(2, 0x90caf9).setDepth(2);
+    // Portal back to Village (West)
+    const returnPortal = this.add.rectangle(30, height / 2, 40, 80, 0x37474f, 0.8)
+      .setStrokeStyle(2, 0xb0bec5).setDepth(2);
     this.physics.add.existing(returnPortal, true);
 
-    this.add.text(30, height / 2, '◀ 村へ\n帰還', {
+    this.add.text(30, height / 2, '◀ 村へ\n脱出', {
       fontSize: '11px',
       color: '#ffffff',
       align: 'center',
@@ -142,32 +127,49 @@ export class ForestScene extends Phaser.Scene {
       this.scene.start('VillageScene');
     });
 
-    // Area Selector Teleporters on East
-    const nextPortal = this.add.rectangle(width - 30, height / 2, 40, 80, 0x2e7d32, 0.7)
-      .setStrokeStyle(2, 0xa5d6a7).setDepth(2);
-    this.physics.add.existing(nextPortal, true);
+    // Stairs down to Next Floor (East)
+    const stairsDown = this.add.rectangle(width - 30, height / 2, 40, 80, 0x4527a0, 0.8)
+      .setStrokeStyle(2, 0xd1c4e9).setDepth(2);
+    this.physics.add.existing(stairsDown, true);
 
-    this.add.text(width - 30, height / 2, '次エリア\n進む ▶', {
+    this.add.text(width - 30, height / 2, '深層階\n階段 ▼', {
       fontSize: '11px',
       color: '#ffffff',
       align: 'center',
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(3);
 
-    this.physics.add.overlap(this.player, nextPortal, () => {
-      if (this.currentArea < 5) {
-        this.currentArea++;
-        if (this.currentArea > this.gameState.unlockedForestArea) {
-          this.gameState.unlockedForestArea = this.currentArea;
-        }
-        this.player.setPosition(100, height / 2);
-        this.spawnAreaContents();
-      } else {
-        // Return to area 1
-        this.currentArea = 1;
-        this.player.setPosition(100, height / 2);
-        this.spawnAreaContents();
+    this.physics.add.overlap(this.player, stairsDown, () => {
+      this.currentFloor++;
+      if (this.currentFloor > this.gameState.unlockedSkyFloor) {
+        this.gameState.unlockedSkyFloor = this.currentFloor;
       }
+      this.player.setPosition(100, height / 2);
+      this.spawnFloorContents();
+    });
+
+    // Elevator shortcut station (North center)
+    const elevator = this.add.rectangle(500, 30, 90, 40, 0x795548, 0.9)
+      .setStrokeStyle(2, 0xd7ccc8).setDepth(2);
+    this.physics.add.existing(elevator, true);
+
+    this.add.text(500, 30, '昇降機', {
+      fontSize: '10px',
+      color: '#ffffff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(3);
+
+    this.physics.add.overlap(this.player, elevator, () => {
+      if (this.gameState.unlockedSkyFloor >= 10) {
+        this.currentFloor = Math.floor(this.gameState.unlockedSkyFloor / 10) * 10;
+      } else if (this.gameState.unlockedSkyFloor >= 5) {
+        this.currentFloor = 5;
+      } else {
+        this.showFloatingMessage(500, 60, '昇降機は5F到達後に利用可能です');
+        return;
+      }
+      this.player.setPosition(100, height / 2);
+      this.spawnFloorContents();
     });
   }
 
@@ -189,83 +191,60 @@ export class ForestScene extends Phaser.Scene {
     });
   }
 
-  private spawnAreaContents(): void {
-    // Clear old monsters & nodes
+  private spawnFloorContents(): void {
     this.monsters.forEach(m => m.destroy());
     this.monsters = [];
-    this.resourceNodes.forEach(n => n.sprite.destroy());
-    this.resourceNodes = [];
+    this.oreNodes.forEach(n => n.sprite.destroy());
+    this.oreNodes = [];
 
-    // Area configuration from Game Design Doc
-    let monsterTypes: string[] = [];
-    let herbType = 'herb_small';
-    let areaName = '';
-
-    switch (this.currentArea) {
-      case 1:
-        areaName = 'エリア1: 森の入り口';
-        monsterTypes = ['slime', 'horned_rabbit'];
-        herbType = 'herb_small';
-        break;
-      case 2:
-        areaName = 'エリア2: 霧の茂み';
-        monsterTypes = ['wild_boar', 'giant_bee'];
-        herbType = 'herb_antidote';
-        break;
-      case 3:
-        areaName = 'エリア3: ささやきの森';
-        monsterTypes = ['goblin', 'deer_battle'];
-        herbType = 'herb_high';
-        break;
-      case 4:
-        areaName = 'エリア4: 影の樹海';
-        monsterTypes = ['treant', 'poison_gladius'];
-        herbType = 'herb_elixir';
-        break;
-      case 5:
-        areaName = 'エリア5: 原初の霊峰 (BOSS)';
-        monsterTypes = ['forest_golem', 'king_slime'];
-        herbType = 'herb_world_tree';
-        break;
+    const isBossFloor = this.currentFloor % 5 === 0;
+    const themeName = isBossFloor ? '天空の試練 (BOSS)' : '天空の階層';
+    
+    if (this.floorText) {
+      this.floorText.setText(`【天空の塔】 ${this.currentFloor}F: ${themeName}`);
     }
 
-    if (this.areaText) {
-      this.areaText.setText(`【始まりの森】 ${areaName}`);
+    const oreType = 'ore_adamantite';
+    const oreCount = 4;
+    for (let i = 0; i < oreCount; i++) {
+      const ox = Phaser.Math.Between(180, 850);
+      const oy = Phaser.Math.Between(100, 700);
+      const sprite = this.add.sprite(ox, oy, `node_${oreType}`).setScale(1.5).setDepth(4);
+      const itemDef = ITEM_DEFINITIONS[oreType];
+      this.oreNodes.push({ sprite, itemId: oreType, itemName: itemDef ? itemDef.name : '鉱石', isMined: false });
     }
 
-    // Spawn 6-8 resource nodes
-    const nodeCount = 7;
-    for (let i = 0; i < nodeCount; i++) {
-      const rx = Phaser.Math.Between(180, 850);
-      const ry = Phaser.Math.Between(100, 700);
-      const sprite = this.add.sprite(rx, ry, `node_${herbType}`).setScale(1.4).setDepth(4);
-      const itemDef = ITEM_DEFINITIONS[herbType];
-      this.resourceNodes.push({
-        sprite,
-        itemId: herbType,
-        itemName: itemDef ? itemDef.name : '薬草',
-        isHarvested: false
-      });
-    }
-
-    // Spawn 8-10 monsters
-    const monsterCount = this.currentArea === 5 ? 5 : 8;
-    for (let i = 0; i < monsterCount; i++) {
-      const type = monsterTypes[i % monsterTypes.length];
-      const mDef = MONSTER_DEFINITIONS[type];
-      if (mDef) {
-        const mx = Phaser.Math.Between(250, 900);
-        const my = Phaser.Math.Between(120, 680);
-        const monster = new Monster(this, mx, my, mDef);
-        this.monsters.push(monster);
+    const normalPool = ['horned_rabbit', 'giant_bee', 'dark_bat', 'hellhound', 'abyss_crawler', 'void_walker', 'shadow_knight'];
+    const bossPool = ['giant_spider', 'volcano_dragon', 'crystal_dragon', 'demon_lord'];
+    
+    // Scale stats based on floor
+    const multiplier = 1 + (this.currentFloor * 0.15);
+    
+    if (isBossFloor) {
+      const baseDef = MONSTER_DEFINITIONS[bossPool[Math.floor(Math.random() * bossPool.length)]];
+      if (baseDef) {
+        const dynamicDef = { ...baseDef, maxHp: Math.floor(baseDef.maxHp * multiplier), attack: Math.floor(baseDef.attack * multiplier), defense: Math.floor(baseDef.defense * multiplier), exp: Math.floor(baseDef.exp * multiplier), gold: Math.floor(baseDef.gold * multiplier) };
+        const mx = Phaser.Math.Between(500, 800);
+        const my = Phaser.Math.Between(300, 500);
+        this.monsters.push(new Monster(this, mx, my, dynamicDef));
+      }
+    } else {
+      const monsterCount = 8;
+      for (let i = 0; i < monsterCount; i++) {
+        const baseDef = MONSTER_DEFINITIONS[normalPool[Math.floor(Math.random() * normalPool.length)]];
+        if (baseDef) {
+          const dynamicDef = { ...baseDef, maxHp: Math.floor(baseDef.maxHp * multiplier), attack: Math.floor(baseDef.attack * multiplier), defense: Math.floor(baseDef.defense * multiplier), exp: Math.floor(baseDef.exp * multiplier), gold: Math.floor(baseDef.gold * multiplier) };
+          const mx = Phaser.Math.Between(260, 900);
+          const my = Phaser.Math.Between(120, 680);
+          this.monsters.push(new Monster(this, mx, my, dynamicDef));
+        }
       }
     }
   }
 
   private setupCombatEvents(): void {
-    // Player melee attack
+    // Player melee
     this.events.on('player-melee-attack', (data: { x: number; y: number; damage: number; range: number }) => {
-      // Visual slash
       const slash = this.add.sprite(data.x, data.y, 'effect_slash').setScale(1.5).setDepth(20);
       this.tweens.add({
         targets: slash,
@@ -275,7 +254,6 @@ export class ForestScene extends Phaser.Scene {
         onComplete: () => slash.destroy()
       });
 
-      // Hit check monsters within range
       for (const m of this.monsters) {
         if (m.isAlive() && Phaser.Math.Distance.Between(data.x, data.y, m.x, m.y) <= data.range) {
           const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, m.x, m.y);
@@ -284,7 +262,7 @@ export class ForestScene extends Phaser.Scene {
       }
     });
 
-    // Player magic projectile
+    // Player magic
     this.events.on('player-fire-projectile', (data: { x: number; y: number; facing: string; damage: number }) => {
       const orb = this.physics.add.sprite(data.x, data.y, 'effect_magic_orb').setDepth(20);
       const speed = 280;
@@ -297,8 +275,7 @@ export class ForestScene extends Phaser.Scene {
 
       orb.setVelocity(vx, vy);
 
-      // Overlap with monsters
-      const collider = this.physics.add.overlap(orb, this.monsters, (o, m) => {
+      this.physics.add.overlap(orb, this.monsters, (o, m) => {
         const monster = m as Monster;
         if (monster.isAlive()) {
           monster.takeDamage(data.damage);
@@ -306,13 +283,12 @@ export class ForestScene extends Phaser.Scene {
         }
       });
 
-      // Auto-destroy after 1.2s
       this.time.delayedCall(1200, () => {
         if (orb.active) orb.destroy();
       });
     });
 
-    // Companion melee attack
+    // Companion melee
     this.events.on('companion-melee-attack', (data: { x: number; y: number; damage: number; target: Monster }) => {
       if (data.target && data.target.isAlive()) {
         const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, data.target.x, data.target.y);
@@ -320,7 +296,7 @@ export class ForestScene extends Phaser.Scene {
       }
     });
 
-    // Companion magic projectile
+    // Companion magic
     this.events.on('companion-fire-projectile', (data: { x: number; y: number; targetX: number; targetY: number; damage: number }) => {
       const orb = this.physics.add.sprite(data.x, data.y, 'effect_magic_orb').setDepth(20);
       const angle = Phaser.Math.Angle.Between(data.x, data.y, data.targetX, data.targetY);
@@ -340,16 +316,13 @@ export class ForestScene extends Phaser.Scene {
       });
     });
 
-    // Monster killed event
+    // Monster killed
     this.events.on('monster-killed', (data: { def: MonsterDefinition; x: number; y: number }) => {
-      // Rewards
       this.gameState.addGold(data.def.gold);
       const leveledUp = this.gameState.addExp(data.def.exp);
 
-      // Quest kill tracking
       this.questManager.recordKill(data.def.id);
 
-      // Drop item check
       if (data.def.dropItemId && Math.random() <= data.def.dropRate) {
         this.gameState.addItem(data.def.dropItemId, 1);
         this.questManager.recordGather(data.def.dropItemId, 1);
@@ -359,13 +332,17 @@ export class ForestScene extends Phaser.Scene {
       if (leveledUp) {
         this.showFloatingMessage(this.player.x, this.player.y - 30, '★ レベルアップ！ ★', '#ffff00');
       }
+
+      if (data.def.id === 'dungeon_boss') {
+        this.showFloatingMessage(this.player.x, this.player.y - 50, '★ ダンジョンボス討伐達成！ ★', '#00ffcc');
+      }
     });
 
     // Companion gather
     this.events.on('companion-gather', (data: { companion: Companion; node: any }) => {
       const node = data.node;
-      if (!node.isHarvested) {
-        node.isHarvested = true;
+      if (!node.isMined) {
+        node.isMined = true;
         node.sprite.setAlpha(0.25);
         this.gameState.addItem(node.itemId, 1);
         this.questManager.recordGather(node.itemId, 1);
@@ -373,9 +350,9 @@ export class ForestScene extends Phaser.Scene {
       }
     });
 
-    // Player died event
+    // Player died
     this.events.on('player-died', () => {
-      this.showFloatingMessage(this.player.x, this.player.y, '力尽きた... 村へ戻ります', '#ff4444');
+      this.showFloatingMessage(this.player.x, this.player.y, 'ダンジョンで力尽きた... 村へ送還', '#ff4444');
       this.time.delayedCall(1500, () => {
         this.gameState.healAll();
         this.scene.start('VillageScene');
@@ -383,20 +360,20 @@ export class ForestScene extends Phaser.Scene {
     });
   }
 
-  private checkHarvestPrompt(): void {
+  private checkMiningPrompt(): void {
     const px = this.player.x;
     const py = this.player.y;
-    let nearbyNode: ResourceNode | null = null;
+    let nearbyNode: OreNode | null = null;
 
-    for (const node of this.resourceNodes) {
-      if (!node.isHarvested && Phaser.Math.Distance.Between(px, py, node.sprite.x, node.sprite.y) < 36) {
+    for (const node of this.oreNodes) {
+      if (!node.isMined && Phaser.Math.Distance.Between(px, py, node.sprite.x, node.sprite.y) < 36) {
         nearbyNode = node;
         break;
       }
     }
 
     if (nearbyNode) {
-      this.promptText.setText(`[E] ${nearbyNode.itemName} を採取する`);
+      this.promptText.setText(`[E] ${nearbyNode.itemName} を採掘する`);
       this.promptText.setPosition(nearbyNode.sprite.x, nearbyNode.sprite.y - 20);
       this.promptText.setVisible(true);
     } else {
@@ -404,17 +381,17 @@ export class ForestScene extends Phaser.Scene {
     }
   }
 
-  private checkHarvest(): void {
+  private checkMining(): void {
     const px = this.player.x;
     const py = this.player.y;
 
-    for (const node of this.resourceNodes) {
-      if (!node.isHarvested && Phaser.Math.Distance.Between(px, py, node.sprite.x, node.sprite.y) < 36) {
-        node.isHarvested = true;
+    for (const node of this.oreNodes) {
+      if (!node.isMined && Phaser.Math.Distance.Between(px, py, node.sprite.x, node.sprite.y) < 36) {
+        node.isMined = true;
         node.sprite.setAlpha(0.25);
         this.gameState.addItem(node.itemId, 1);
         this.questManager.recordGather(node.itemId, 1);
-        this.showFloatingMessage(node.sprite.x, node.sprite.y - 15, `+1 ${node.itemName}`, '#81c784');
+        this.showFloatingMessage(node.sprite.x, node.sprite.y - 15, `+1 ${node.itemName}`, '#f1c40f');
         break;
       }
     }
@@ -439,7 +416,6 @@ export class ForestScene extends Phaser.Scene {
   }
 
   private createHUD(): void {
-    // Player HUD
     this.add.rectangle(12, 12, 280, 80, 0x111625, 0.85)
       .setOrigin(0, 0).setScrollFactor(0).setStrokeStyle(1, 0x3d4461).setDepth(100);
 
@@ -450,16 +426,14 @@ export class ForestScene extends Phaser.Scene {
       lineSpacing: 3
     }).setScrollFactor(0).setDepth(101);
 
-    // Area Title HUD
-    this.areaText = this.add.text(400, 24, '', {
+    this.floorText = this.add.text(400, 24, '', {
       fontSize: '14px',
-      color: '#81c784',
+      color: '#ffd54f',
       backgroundColor: '#000000aa',
       padding: { x: 8, y: 4 },
       fontStyle: 'bold'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
 
-    // Harvest prompt
     this.promptText = this.add.text(0, 0, '', {
       fontSize: '12px',
       color: '#ffff00',
@@ -474,8 +448,8 @@ export class ForestScene extends Phaser.Scene {
     this.hudText.setText(
       `Lv.${p.level} ${p.name} | HP: ${p.hp}/${p.maxHp} | MP: ${p.mp}/${p.maxMp}\n` +
       `EXP: ${p.exp}/${p.maxExp} | 所持金: ${p.gold} G\n` +
-      `所持薬草数: ${this.gameState.getItemCount('herb_small') + this.gameState.getItemCount('herb_antidote') + this.gameState.getItemCount('herb_high')}株\n` +
-      `操作: [SPACE/J] 攻撃 | [F] スキル | [E] 採取`
+      `所持鉱石数: ${this.gameState.getItemCount('ore_copper') + this.gameState.getItemCount('ore_iron') + this.gameState.getItemCount('ore_silver')}個\n` +
+      `操作: [左クリック] 攻撃 | [E] 採掘`
     );
   }
 }

@@ -1,3 +1,4 @@
+import { EQUIPMENT_DEFINITIONS } from "../data/equipment";
 import Phaser from 'phaser';
 import { Player } from '../entities/Player';
 import { Companion } from '../entities/Companion';
@@ -16,6 +17,8 @@ export class VillageScene extends Phaser.Scene {
   private questHudText!: Phaser.GameObjects.Text;
   private activeModal: Phaser.GameObjects.Container | null = null;
   private interactPromptText!: Phaser.GameObjects.Text;
+  private shopNpc!: Phaser.GameObjects.Rectangle;
+  private equipShopNpc!: Phaser.GameObjects.Rectangle;
 
   constructor() {
     super({ key: 'VillageScene' });
@@ -24,6 +27,7 @@ export class VillageScene extends Phaser.Scene {
   }
 
   public create(): void {
+    this.gameState.saveToStorage();
     const width = 800;
     const height = 600;
 
@@ -120,33 +124,14 @@ export class VillageScene extends Phaser.Scene {
       .setScale(0.15).setDepth(2);
     this.physics.add.existing(tavern, true);
     (tavern.body as Phaser.Physics.Arcade.StaticBody).setSize(150, 150);
-    this.physics.add.collider(this.player, tavern);
+    this.physics.add.overlap(this.player, tavern, () => {
+      this.scene.start('TavernScene');
+    });
 
-    this.add.text(408, 390, '【村の酒場】', {
-      fontSize: '14px',
+    this.add.text(408, 390, '【冒険者ギルド/酒場】\n(入る)', {
+      fontSize: '12px',
       color: '#ffcc00',
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(3);
-
-    // Quest Board in Tavern
-    this.add.image(350, 500, 'furniture_board').setDepth(3);
-    this.add.text(350, 525, '[E] 掲示板', {
-      fontSize: '11px',
-      color: '#64b5f6',
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(3);
-
-    // BOT Recruitment Counter in Tavern
-    const botCounter = this.add.rectangle(470, 500, 48, 28, 0x8d6e63)
-      .setStrokeStyle(2, 0xd7ccc8).setDepth(3);
-    this.add.text(470, 500, '仲間\n雇入', {
-      fontSize: '10px',
-      color: '#ffffff',
-      align: 'center'
-    }).setOrigin(0.5).setDepth(4);
-    this.add.text(470, 525, '[E] BOT雇用', {
-      fontSize: '11px',
-      color: '#ffb74d',
+      align: 'center',
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(3);
 
@@ -179,8 +164,67 @@ export class VillageScene extends Phaser.Scene {
       this.scene.start('ForestScene');
     });
 
-    this.physics.add.overlap(this.player, dungeonPortal, () => {
-      this.scene.start('DungeonScene');
+    this.physics.add.overlap(this.player, dungeonPortal, () => { this.scene.start('DungeonScene'); });
+
+    // --- Volcano Entrance (South-East) ---
+    const volcanoPortal = this.add.image(750, 480, 'dungeon_portal').setScale(0.12).setTint(0xff5555).setDepth(2);
+    this.physics.add.existing(volcanoPortal, true);
+    (volcanoPortal.body as Phaser.Physics.Arcade.StaticBody).setSize(120, 120);
+    this.add.text(750, 430, '溶岩洞窟\n(Lv11~) ▶', {
+      fontSize: '11px',
+      color: '#ff6666',
+      align: 'center',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(3);
+    
+    this.physics.add.overlap(this.player, volcanoPortal, () => {
+      this.scene.start('VolcanoScene');
+    });
+
+    // --- Ice Cavern Entrance (North-East) ---
+    const icePortal = this.add.image(750, 150, 'dungeon_portal').setScale(0.12).setTint(0x88ccff).setDepth(2);
+    this.physics.add.existing(icePortal, true);
+    (icePortal.body as Phaser.Physics.Arcade.StaticBody).setSize(120, 120);
+    this.add.text(750, 100, '氷結洞窟\n(Lv16~) ▶', {
+      fontSize: '11px',
+      color: '#88ccff',
+      align: 'center',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(3);
+    
+    this.physics.add.overlap(this.player, icePortal, () => {
+      this.scene.start('IceCavernScene');
+    });
+
+    // --- Abyss Entrance (Far North-East) ---
+    const abyssPortal = this.add.image(750, 40, 'dungeon_portal').setScale(0.12).setTint(0xa020f0).setDepth(2);
+    this.physics.add.existing(abyssPortal, true);
+    (abyssPortal.body as Phaser.Physics.Arcade.StaticBody).setSize(120, 120);
+    this.add.text(750, 80, '深淵への扉\n(Lv22~) ▶', {
+      fontSize: '11px',
+      color: '#d2b4de',
+      align: 'center',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(3);
+    
+    this.physics.add.overlap(this.player, abyssPortal, () => {
+      this.scene.start('AbyssScene');
+    });
+
+
+    // --- Sky Entrance (Center) ---
+    const skyPortal = this.add.image(80, 150, 'dungeon_portal').setScale(0.12).setTint(0xe0f7fa).setDepth(2);
+    this.physics.add.existing(skyPortal, true);
+    (skyPortal.body as Phaser.Physics.Arcade.StaticBody).setSize(120, 120);
+    this.add.text(80, 100, '天空の塔\n(無限) ◀', {
+      fontSize: '11px',
+      color: '#00bcd4',
+      align: 'center',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(3);
+    
+    this.physics.add.overlap(this.player, skyPortal, () => {
+      this.scene.start('SkyScene');
     });
 
     // Village Center Monument / Welcome
@@ -190,17 +234,43 @@ export class VillageScene extends Phaser.Scene {
       backgroundColor: '#00000088',
       padding: { x: 8, y: 4 }
     }).setOrigin(0.5).setDepth(2);
+
+    // --- Item Shop ---
+    
+    // --- Equip Shop ---
+    this.equipShopNpc = this.add.rectangle(200, 150, 24, 24, 0xe74c3c).setDepth(2);
+    this.physics.add.existing(this.equipShopNpc, true);
+    this.add.text(200, 120, '【武具屋】\n(話す)', {
+      fontSize: '11px',
+      color: '#e74c3c',
+      align: 'center',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(3);
+
+    this.shopNpc = this.add.rectangle(600, 150, 24, 24, 0xff9800).setDepth(2);
+    this.physics.add.existing(this.shopNpc, true);
+    this.add.text(600, 120, '【道具屋】\n(話す)', {
+      fontSize: '11px',
+      color: '#ff9800',
+      align: 'center',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(3);
   }
 
   private spawnCompanions(): void {
-    // Clear existing companion sprites
     this.companions.forEach(c => c.destroy());
     this.companions = [];
-
-    // Spawn each recruited companion
+    const offsets = [
+      { x: -28, y: 0 },
+      { x: 28, y: 0 },
+      { x: 0, y: -28 },
+      { x: 0, y: 28 },
+      { x: -28, y: -28 },
+      { x: 28, y: -28 }
+    ];
     this.gameState.recruitedCompanions.forEach((data, index) => {
-      const offsetX = index === 0 ? -28 : 28;
-      const comp = new Companion(this, this.player.x + offsetX, this.player.y + 20, data, this.player);
+      const off = offsets[index % offsets.length];
+      const comp = new Companion(this, this.player.x + off.x, this.player.y + off.y, data, this.player);
       this.companions.push(comp);
     });
   }
@@ -251,7 +321,7 @@ export class VillageScene extends Phaser.Scene {
       `Lv.${p.level} ${p.name} (${p.classType.toUpperCase()})\n` +
       `HP: ${p.hp}/${p.maxHp}  | MP: ${p.mp}/${p.maxMp}\n` +
       `EXP: ${p.exp}/${p.maxExp} | 所持金: ${p.gold} G\n` +
-      `パーティ人数: ${1 + compCount}/3人`
+      `パーティ人数: ${1 + compCount}/6人`
     );
 
     // Update Quests HUD
@@ -272,238 +342,176 @@ export class VillageScene extends Phaser.Scene {
   }
 
   private checkNearbyInteractables(): void {
-    const px = this.player.x;
-    const py = this.player.y;
-
-    // Quest Board interaction range
-    if (Phaser.Math.Distance.Between(px, py, 350, 500) < 50) {
-      this.interactPromptText.setText('[E] クエスト掲示板を見る');
-      this.interactPromptText.setPosition(350, 545);
-      this.interactPromptText.setVisible(true);
-      return;
-    }
-
-    // Bot Recruitment interaction range
-    if (Phaser.Math.Distance.Between(px, py, 470, 500) < 50) {
-      this.interactPromptText.setText('[E] 仲間(BOT)雇用カウンター');
-      this.interactPromptText.setPosition(470, 545);
-      this.interactPromptText.setVisible(true);
-      return;
-    }
-
     this.interactPromptText.setVisible(false);
+    
+    const distEquip = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.equipShopNpc.x, this.equipShopNpc.y);
+    if (distEquip < 50) {
+      this.interactPromptText.setText('[E] 武具屋で買い物をする');
+      this.interactPromptText.setPosition(this.player.x, this.player.y - 30);
+      this.interactPromptText.setVisible(true);
+    }
+
+    const distShop = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.shopNpc.x, this.shopNpc.y);
+    if (distShop < 50) {
+      this.interactPromptText.setText('[E] 道具屋で買い物をする');
+      this.interactPromptText.setPosition(this.player.x, this.player.y - 30);
+      this.interactPromptText.setVisible(true);
+    }
   }
 
   private checkInteractions(): void {
-    const px = this.player.x;
-    const py = this.player.y;
+    const distEquip = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.equipShopNpc.x, this.equipShopNpc.y);
+    if (distEquip < 50) {
+      this.openEquipShop();
+      return;
+    }
 
-    if (Phaser.Math.Distance.Between(px, py, 350, 500) < 50) {
-      this.openQuestBoardModal();
-    } else if (Phaser.Math.Distance.Between(px, py, 470, 500) < 50) {
-      this.openBotRecruitmentModal();
+    const distShop = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.shopNpc.x, this.shopNpc.y);
+    if (distShop < 50) {
+      this.openItemShop();
     }
   }
 
-  private openQuestBoardModal(): void {
-    this.closeModal();
+  
+  private openEquipShop(): void {
+    if (this.activeModal) return;
 
-    const container = this.add.container(400, 300).setScrollFactor(0).setDepth(200);
-    const bg = this.add.rectangle(0, 0, 620, 440, 0x161a29, 0.95)
-      .setStrokeStyle(2, 0x5c6bc0);
+    this.activeModal = this.add.container(400, 300).setScrollFactor(0).setDepth(200);
 
-    const title = this.add.text(0, -190, '村の酒場 クエスト掲示板', {
+    const bg = this.add.rectangle(0, 0, 540, 500, 0x111625, 0.95)
+      .setStrokeStyle(2, 0xe74c3c);
+    this.activeModal.add(bg);
+
+    const title = this.add.text(0, -230, '【武具屋】', {
       fontSize: '18px',
-      color: '#ffcc00',
+      color: '#e74c3c',
       fontStyle: 'bold'
     }).setOrigin(0.5);
+    this.activeModal.add(title);
 
-    container.add([bg, title]);
+    const getStatusText = () => {
+      const p = this.gameState.player;
+      const wName = p.equippedWeapon ? EQUIPMENT_DEFINITIONS[p.equippedWeapon]?.name : 'なし';
+      const aName = p.equippedArmor ? EQUIPMENT_DEFINITIONS[p.equippedArmor]?.name : 'なし';
+      return `所持金: ${p.gold} G\n攻撃力: ${p.attack} | 防御力: ${p.defense}\n装備武器: ${wName}\n装備防具: ${aName}`;
+    };
 
-    // Available & Active Quests List
-    let yPos = -140;
-    const quests = Object.values(QUEST_DEFINITIONS);
+    const desc = this.add.text(0, -180, getStatusText(), {
+      fontSize: '12px',
+      color: '#ffffff',
+      align: 'center',
+      lineSpacing: 4
+    }).setOrigin(0.5);
+    this.activeModal.add(desc);
 
-    quests.forEach(q => {
-      const isActive = this.questManager.isQuestActive(q.id);
-      const isCompleted = this.questManager.isQuestCompleted(q.id);
-      const canTurnIn = this.questManager.canTurnIn(q.id);
+    const resultMsg = this.add.text(0, -120, '装備品を購入すると自動で装備されます', {
+      fontSize: '12px',
+      color: '#ffff00',
+      align: 'center'
+    }).setOrigin(0.5);
+    this.activeModal.add(resultMsg);
 
-      const qRowBg = this.add.rectangle(0, yPos, 580, 48, 0x22293d)
-        .setStrokeStyle(1, 0x3d4766);
+    const equips = Object.values(EQUIPMENT_DEFINITIONS);
+    let yPos = -70;
+    
+    // Split into two columns
+    equips.forEach((eq, idx) => {
+      const col = idx % 2;
+      const row = Math.floor(idx / 2);
+      const xPos = col === 0 ? -130 : 130;
+      const curY = yPos + row * 55;
 
-      const qInfo = this.add.text(-270, yPos - 12, `[${q.rank}ランク] ${q.title} (${q.recommendedLevel})`, {
-        fontSize: '13px',
-        color: '#ffffff',
-        fontStyle: 'bold'
+      const btn = this.add.rectangle(xPos, curY, 240, 50, 0x3d4461).setInteractive({ useHandCursor: true });
+      const txt = this.add.text(xPos, curY, `${eq.name} (${eq.price}G)\n${eq.type === 'weapon' ? '攻+'+eq.bonusAttack : '防+'+eq.bonusDefense}`, { fontSize: '11px', color: '#fff', align: 'center' }).setOrigin(0.5);
+      
+      btn.on('pointerdown', () => {
+        if (this.gameState.spendGold(eq.price)) {
+          this.gameState.addItem(eq.id, 1);
+          this.gameState.equipItem(eq.id);
+          desc.setText(getStatusText());
+          resultMsg.setText(`${eq.name} を購入し装備しました！`);
+        } else {
+          resultMsg.setText('ゴールドが足りません！');
+        }
       });
+      this.activeModal?.add([btn, txt]);
+    });
 
-      const qDesc = this.add.text(-270, yPos + 6, `${q.description} 報酬: ${q.reward.gold}G, ${q.reward.exp}EXP`, {
-        fontSize: '11px',
-        color: '#b0bec5'
-      });
+    const closeBtn = this.add.rectangle(0, 220, 120, 30, 0x555555).setInteractive({ useHandCursor: true });
+    const closeTxt = this.add.text(0, 220, '閉じる (ESC)', { fontSize: '12px', color: '#fff' }).setOrigin(0.5);
+    closeBtn.on('pointerdown', () => {
+      this.time.delayedCall(10, () => this.closeModal());
+    });
+    this.activeModal.add([closeBtn, closeTxt]);
+  }
 
-      container.add([qRowBg, qInfo, qDesc]);
+  private openItemShop(): void {
+    if (this.activeModal) return;
 
-      if (isCompleted) {
-        const doneText = this.add.text(230, yPos, '完了済 ✓', {
-          fontSize: '13px',
-          color: '#81c784',
-          fontStyle: 'bold'
-        }).setOrigin(0.5);
-        container.add(doneText);
-      } else if (canTurnIn) {
-        const turnInBtn = this.add.rectangle(230, yPos, 80, 28, 0xff9800)
-          .setInteractive({ useHandCursor: true });
-        const btnText = this.add.text(230, yPos, '報告納品', {
-          fontSize: '12px',
-          color: '#ffffff',
-          fontStyle: 'bold'
-        }).setOrigin(0.5);
+    this.activeModal = this.add.container(400, 300).setScrollFactor(0).setDepth(200);
 
-        turnInBtn.on('pointerdown', () => {
-          this.questManager.turnInQuest(q.id);
-          this.openQuestBoardModal(); // Refresh modal
-        });
-        container.add([turnInBtn, btnText]);
-      } else if (isActive) {
-        const prog = this.questManager.getQuestProgress(q.id);
-        const progText = this.add.text(230, yPos, `進行中 (${prog.current}/${prog.required})`, {
-          fontSize: '12px',
-          color: '#ffd54f'
-        }).setOrigin(0.5);
-        container.add(progText);
+    const bg = this.add.rectangle(0, 0, 400, 250, 0x111625, 0.95)
+      .setStrokeStyle(2, 0xff9800);
+    this.activeModal.add(bg);
+
+    const title = this.add.text(0, -100, '【道具屋】', {
+      fontSize: '18px',
+      color: '#ff9800',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.activeModal.add(title);
+
+    const getInvText = () => `所持金: ${this.gameState.player.gold} G\n[所持] 小型: ${this.gameState.getItemCount('herb_small')}個 / 大型: ${this.gameState.getItemCount('herb_large')}個\n※ポーションは戦闘時にHPが40%以下になると自動で使用されます`;
+
+    const desc = this.add.text(0, -50, getInvText(), {
+      fontSize: '12px',
+      color: '#ffffff',
+      align: 'center',
+      lineSpacing: 4
+    }).setOrigin(0.5);
+    this.activeModal.add(desc);
+
+    const resultMsg = this.add.text(0, 20, '', {
+      fontSize: '12px',
+      color: '#ffff00',
+      align: 'center'
+    }).setOrigin(0.5);
+    this.activeModal.add(resultMsg);
+
+    const buySmall = this.add.rectangle(-100, 70, 150, 40, 0x3d4461).setInteractive();
+    const buySmallText = this.add.text(-100, 70, '小型ポーション (10G)\n(HP 30回復)', { fontSize: '11px', color: '#fff', align: 'center' }).setOrigin(0.5);
+    buySmall.on('pointerdown', () => {
+      if (this.gameState.spendGold(10)) {
+        this.gameState.addItem('herb_small', 1);
+        desc.setText(getInvText());
+        resultMsg.setText('小型ポーションを購入しました！');
       } else {
-        const acceptBtn = this.add.rectangle(230, yPos, 70, 28, 0x388e3c)
-          .setInteractive({ useHandCursor: true });
-        const btnText = this.add.text(230, yPos, '受注', {
-          fontSize: '12px',
-          color: '#ffffff',
-          fontStyle: 'bold'
-        }).setOrigin(0.5);
-
-        acceptBtn.on('pointerdown', () => {
-          this.questManager.acceptQuest(q.id);
-          this.openQuestBoardModal(); // Refresh modal
-        });
-        container.add([acceptBtn, btnText]);
+        resultMsg.setText('ゴールドが足りません！');
       }
-
-      yPos += 54;
     });
+    this.activeModal.add([buySmall, buySmallText]);
 
-    const closeBtn = this.add.rectangle(0, 195, 120, 32, 0x455a64)
-      .setInteractive({ useHandCursor: true });
-    const closeBtnText = this.add.text(0, 195, '閉じる [ESC]', {
-      fontSize: '13px',
-      color: '#ffffff',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
+    const buyLarge = this.add.rectangle(100, 70, 150, 40, 0x3d4461).setInteractive();
+    const buyLargeText = this.add.text(100, 70, '大型ポーション (30G)\n(HP 100回復)', { fontSize: '11px', color: '#fff', align: 'center' }).setOrigin(0.5);
+    buyLarge.on('pointerdown', () => {
+      if (this.gameState.spendGold(30)) {
+        this.gameState.addItem('herb_large', 1);
+        desc.setText(getInvText());
+        resultMsg.setText('大型ポーションを購入しました！');
+      } else {
+        resultMsg.setText('ゴールドが足りません！');
+      }
+    });
+    this.activeModal.add([buyLarge, buyLargeText]);
 
-    closeBtn.on('pointerdown', () => this.closeModal());
-    container.add([closeBtn, closeBtnText]);
-
-    this.activeModal = container;
+    const closeBtn = this.add.rectangle(0, 150, 120, 30, 0x555555).setInteractive();
+    const closeTxt = this.add.text(0, 150, '閉じる (ESC)', { fontSize: '12px', color: '#fff' }).setOrigin(0.5);
+    closeBtn.on('pointerdown', () => {
+      this.time.delayedCall(10, () => this.closeModal());
+    });
+    this.activeModal.add([closeBtn, closeTxt]);
   }
 
-  private openBotRecruitmentModal(): void {
-    this.closeModal();
-
-    const container = this.add.container(400, 300).setScrollFactor(0).setDepth(200);
-    const bg = this.add.rectangle(0, 0, 560, 380, 0x1b2030, 0.95)
-      .setStrokeStyle(2, 0xffa726);
-
-    const title = this.add.text(0, -160, '酒場のBOT仲間 雇入所 (最大2名まで編成可能)', {
-      fontSize: '16px',
-      color: '#ffa726',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    container.add([bg, title]);
-
-    // Current recruited companions
-    const currentBots = this.gameState.recruitedCompanions;
-    const statusText = this.add.text(0, -125, `現在のパーティ仲間: ${currentBots.length}/2名`, {
-      fontSize: '13px',
-      color: '#ffffff'
-    }).setOrigin(0.5);
-    container.add(statusText);
-
-    // List of candidates to hire
-    const candidates: { name: string; gender: Gender; classType: ClassType; role: string; cost: number }[] = [
-      { name: 'アルス', gender: 'male', classType: 'warrior', role: '近接アタッカー (剣)', cost: 100 },
-      { name: 'ソフィア', gender: 'female', classType: 'mage', role: '遠距離火力 (魔法)', cost: 100 },
-      { name: 'ロビン', gender: 'male', classType: 'thief', role: '高速手数アタッカー (双剣)', cost: 100 },
-      { name: 'セシリア', gender: 'female', classType: 'paladin', role: 'タンク・防御力 (剣と盾)', cost: 100 }
-    ];
-
-    let yPos = -85;
-    candidates.forEach(cand => {
-      const rowBg = this.add.rectangle(0, yPos, 500, 44, 0x272e42)
-        .setStrokeStyle(1, 0x3d4766);
-
-      const info = this.add.text(-230, yPos, `${cand.name}【${cand.role}】 Lv.${this.gameState.player.level}`, {
-        fontSize: '13px',
-        color: '#ffffff'
-      }).setOrigin(0, 0.5);
-
-      const hireBtn = this.add.rectangle(190, yPos, 90, 28, 0x2e7d32)
-        .setInteractive({ useHandCursor: true });
-      const hireBtnText = this.add.text(190, yPos, `雇う (${cand.cost}G)`, {
-        fontSize: '12px',
-        color: '#ffffff',
-        fontStyle: 'bold'
-      }).setOrigin(0.5);
-
-      hireBtn.on('pointerdown', () => {
-        if (this.gameState.recruitedCompanions.length >= 2) {
-          alert('仲間は最大2名までです！');
-          return;
-        }
-        if (!this.gameState.spendGold(cand.cost)) {
-          alert('所持金が足りません！');
-          return;
-        }
-        this.gameState.recruitCompanion(cand.name, cand.gender, cand.classType);
-        this.spawnCompanions();
-        this.openBotRecruitmentModal(); // Refresh modal
-      });
-
-      container.add([rowBg, info, hireBtn, hireBtnText]);
-      yPos += 50;
-    });
-
-    // Dismiss button if have companions
-    if (currentBots.length > 0) {
-      const dismissBtn = this.add.rectangle(-80, 140, 130, 32, 0xc62828)
-        .setInteractive({ useHandCursor: true });
-      const dismissText = this.add.text(-80, 140, '仲間を解散する', {
-        fontSize: '12px',
-        color: '#ffffff',
-        fontStyle: 'bold'
-      }).setOrigin(0.5);
-
-      dismissBtn.on('pointerdown', () => {
-        this.gameState.recruitedCompanions = [];
-        this.spawnCompanions();
-        this.openBotRecruitmentModal();
-      });
-      container.add([dismissBtn, dismissText]);
-    }
-
-    const closeBtn = this.add.rectangle(120, 140, 100, 32, 0x455a64)
-      .setInteractive({ useHandCursor: true });
-    const closeBtnText = this.add.text(120, 140, '閉じる [ESC]', {
-      fontSize: '13px',
-      color: '#ffffff',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    closeBtn.on('pointerdown', () => this.closeModal());
-    container.add([closeBtn, closeBtnText]);
-
-    this.activeModal = container;
-  }
 
   private closeModal(): void {
     if (this.activeModal) {

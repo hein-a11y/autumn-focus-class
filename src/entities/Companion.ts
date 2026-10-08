@@ -16,7 +16,9 @@ export class Companion extends Phaser.Physics.Arcade.Sprite {
   public bonusAttack: number = 0;
   public bonusDefense: number = 0;
   
-  private aiState: 'idle' | 'follow' | 'attack' = 'idle';
+  private aiState: 'idle' | 'follow' | 'attack' | 'gather' = 'idle';
+  private targetNode: any | null = null;
+  private lastGatherTime: number = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, data: CompanionData, player: Player) {
     super(scene, x, y, `char_${data.classType}_${data.gender}`);
@@ -49,7 +51,7 @@ export class Companion extends Phaser.Physics.Arcade.Sprite {
   private walkTween: Phaser.Tweens.Tween | null = null;
   private attackTween: Phaser.Tweens.Tween | null = null;
 
-  public update(time: number, nearbyMonsters: Monster[]): void {
+  public update(time: number, nearbyMonsters: Monster[], nodes: any[] = []): void {
     if (!this.body || this.companionData.hp <= 0) {
       this.setVelocity(0, 0);
       return;
@@ -83,13 +85,28 @@ export class Companion extends Phaser.Physics.Arcade.Sprite {
 
     this.targetMonster = closestMonster;
 
-    // State machine logic from GDD Section 6:
-    // 1. Attack State: enemy within 120px
-    // 2. Follow State: distance to player > 60px
-    // 3. Idle State: close to player, no enemies
+    // Search for closest node if idle
+    let closestNodeDist = 150;
+    this.targetNode = null;
+    if (!this.targetMonster) {
+      for (const node of nodes) {
+        if (!node.isMined && !node.isHarvested) {
+          const d = Phaser.Math.Distance.Between(this.x, this.y, node.sprite.x, node.sprite.y);
+          if (d < closestNodeDist) {
+            closestNodeDist = d;
+            this.targetNode = node;
+          }
+        }
+      }
+    }
+
+    // State machine logic
     if (this.targetMonster && distToPlayer < 200) {
       this.aiState = 'attack';
       this.handleAttackState(time, this.targetMonster);
+    } else if (this.targetNode && distToPlayer < 200) {
+      this.aiState = 'gather';
+      this.handleGatherState(time, this.targetNode);
     } else if (distToPlayer > 60) {
       this.aiState = 'follow';
       this.handleFollowState();
@@ -200,6 +217,27 @@ export class Companion extends Phaser.Physics.Arcade.Sprite {
     const angle = Phaser.Math.Angle.Between(this.x, this.y, this.player.x, this.player.y);
     const speed = this.companionData.speed;
     this.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+  }
+
+  private handleGatherState(time: number, node: any): void {
+    const dist = Phaser.Math.Distance.Between(this.x, this.y, node.sprite.x, node.sprite.y);
+    if (dist > 36) {
+      const angle = Phaser.Math.Angle.Between(this.x, this.y, node.sprite.x, node.sprite.y);
+      this.setVelocity(Math.cos(angle) * this.companionData.speed, Math.sin(angle) * this.companionData.speed);
+    } else {
+      this.setVelocity(0, 0);
+      if (time - this.lastGatherTime > 1500) { // 1.5s gather time
+        this.lastGatherTime = time;
+        this.scene.events.emit('companion-gather', { companion: this, node });
+        if (this.walkTween && this.walkTween.isPlaying()) this.walkTween.stop();
+        this.scene.tweens.add({
+          targets: this,
+          y: this.y - 10,
+          duration: 100,
+          yoyo: true
+        });
+      }
+    }
   }
 
   private handleAttackState(time: number, monster: Monster): void {
