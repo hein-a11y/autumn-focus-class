@@ -29,6 +29,7 @@ export class Companion extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
 
     this.setCollideWorldBounds(true);
+    this.setScale(1.5);
     this.setSize(18, 22);
     this.setOffset(7, 9);
     this.setDepth(9);

@@ -36,6 +36,17 @@ export class BootScene extends Phaser.Scene {
       frameHeight: 150
     });
     this.load.image('monster_volcano_dragon', 'assets/BOSS/reddragonfly.png');
+    
+    // Load Class Sprites
+    this.load.image('char_warrior_male', 'assets/characters/warrior.png');
+    this.load.image('char_warrior_female', 'assets/characters/warrior.png');
+    this.load.image('char_mage_male', 'assets/characters/mage.png');
+    this.load.image('char_mage_female', 'assets/characters/mage.png');
+    this.load.image('char_thief_male', 'assets/characters/thief.png');
+    this.load.image('char_thief_female', 'assets/characters/thief.png');
+    this.load.image('char_paladin_male', 'assets/characters/paladin.png');
+    this.load.image('char_paladin_female', 'assets/characters/paladin.png');
+
 
     // Load Furniture Atlas
     this.load.atlas('furniture_pack', 'assets/furniture/furniture.png', 'assets/furniture/furniture.json');
