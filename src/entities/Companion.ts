@@ -258,7 +258,7 @@ export class Companion extends Phaser.Physics.Arcade.Sprite {
     const isMage = this.companionData.classType === 'mage';
     const preferredRange = isMage ? 100 : 36;
 
-    if (dist > preferredRange) {
+    if (dist > preferredRange + (monster.displayWidth / 2)) {
       // Approach target
       const angle = Phaser.Math.Angle.Between(this.x, this.y, monster.x, monster.y);
       this.setVelocity(Math.cos(angle) * this.companionData.speed, Math.sin(angle) * this.companionData.speed);

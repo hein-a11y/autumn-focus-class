@@ -29,8 +29,8 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
     let boxSize = Math.max(14, def.size);
     
     if (def.id === 'demon_lord') {
-      this.setSize(50, 50);
-      this.setOffset((237 - 50) / 2, 231 - 50); // Feet of the 237x231 sprite
+      this.setSize(180, 180);
+      this.setOffset((237 - 180) / 2, 231 - 180); // Bottom center of the 237x231 sprite
       this.setScale(0.8); // Slightly scale down
     } else {
       this.setSize(boxSize, boxSize);
@@ -76,7 +76,7 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
           this.setVelocity(0, 0); // Don't run away!
         }
 
-        const isClose = dist < 65;
+        const isClose = dist < 65 + (this.displayWidth / 2);
         const targetSprite = target as unknown as Phaser.Physics.Arcade.Sprite;
 
         // If target is close, boss considers AoE or Melee
@@ -94,7 +94,8 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
             });
 
             // Trigger AoE Knockback
-            const aoeCircle = this.scene.add.circle(this.x, this.y, 85, 0xff0000, 0.4).setDepth(19);
+            const aoeRadius = 160;
+            const aoeCircle = this.scene.add.circle(this.x, this.y, aoeRadius, 0xff0000, 0.4).setDepth(19);
             this.scene.tweens.add({
               targets: aoeCircle,
               scale: 1.5,
@@ -106,12 +107,12 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
             // Hit all nearby characters
             const scene = this.scene as any;
             const targetsToHit = [];
-            if (scene.player && Phaser.Math.Distance.Between(this.x, this.y, scene.player.x, scene.player.y) <= 90) {
+            if (scene.player && Phaser.Math.Distance.Between(this.x, this.y, scene.player.x, scene.player.y) <= aoeRadius) {
               targetsToHit.push(scene.player);
             }
             if (scene.companions) {
               scene.companions.forEach((comp: any) => {
-                if (comp.companionData && comp.companionData.hp > 0 && Phaser.Math.Distance.Between(this.x, this.y, comp.x, comp.y) <= 90) {
+                if (comp.companionData && comp.companionData.hp > 0 && Phaser.Math.Distance.Between(this.x, this.y, comp.x, comp.y) <= aoeRadius) {
                   targetsToHit.push(comp);
                 }
               });
@@ -129,7 +130,7 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
               });
             });
 
-          } else if (dist < 40 && time - this.lastAttackTime > 1200) {
+          } else if (dist < 40 + (this.displayWidth / 2) && time - this.lastAttackTime > 1200) {
             // Standard Melee if close
             this.lastAttackTime = time;
             target.takeDamage(this.monsterDef.attack);

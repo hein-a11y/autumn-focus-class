@@ -448,7 +448,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         duration: 800,
         ease: 'Power2',
         onComplete: () => {
-          // Typically we'd show a game over screen or respawn here
+          // Restore HP
+          this.gameState.player.hp = this.gameState.player.maxHp;
+          this.gameState.recruitedCompanions.forEach(c => c.hp = c.maxHp);
+          
+          // Teleport back to village
+          this.scene.cameras.main.fade(500, 0, 0, 0);
+          this.scene.time.delayedCall(500, () => {
+            this.scene.scene.start('VillageScene');
+          });
         }
       });
       return;

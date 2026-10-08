@@ -277,7 +277,7 @@ export class ForestScene extends Phaser.Scene {
 
       // Hit check monsters within range
       for (const m of this.monsters) {
-        if (m.isAlive() && Phaser.Math.Distance.Between(data.x, data.y, m.x, m.y) <= data.range) {
+        if (m.isAlive() && Phaser.Math.Distance.Between(data.x, data.y, m.x, m.y) <= data.range + (m.displayWidth / 2)) {
           const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, m.x, m.y);
           m.takeDamage(data.damage, angle);
         }
