@@ -457,7 +457,7 @@ export class DungeonScene extends Phaser.Scene {
       `Lv.${p.level} ${p.name} | HP: ${p.hp}/${p.maxHp} | MP: ${p.mp}/${p.maxMp}\n` +
       `EXP: ${p.exp}/${p.maxExp} | 所持金: ${p.gold} G\n` +
       `所持鉱石数: ${this.gameState.getItemCount('ore_copper') + this.gameState.getItemCount('ore_iron') + this.gameState.getItemCount('ore_silver')}個\n` +
-      `操作: [SPACE/J] 攻撃 | [E] 採掘`
+      `操作: [SPACE/J] 攻撃 | [F] スキル | [E] 採掘`
     );
   }
 }

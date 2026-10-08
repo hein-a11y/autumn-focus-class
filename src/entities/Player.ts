@@ -1,10 +1,18 @@
 import Phaser from 'phaser';
 import { GameState } from '../managers/GameState';
+import { CLASS_SKILLS } from '../data/skills';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   public facing: 'up' | 'down' | 'left' | 'right' = 'down';
   public isAttacking: boolean = false;
   private lastAttackTime: number = 0;
+  private lastSkillTime: number = 0;
+  private skillCooldownText!: Phaser.GameObjects.Text;
+  
+  public activeAttackMultiplier: number = 1;
+  public bonusAttack: number = 0;
+  public bonusDefense: number = 0;
+
   private gameState: GameState;
   private isInvulnerable: boolean = false;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -15,7 +23,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     D: Phaser.Input.Keyboard.Key;
     SPACE: Phaser.Input.Keyboard.Key;
     J: Phaser.Input.Keyboard.Key;
+    F: Phaser.Input.Keyboard.Key;
   };
+
+  public destroy(fromScene?: boolean): void {
+    if (this.skillCooldownText) {
+      this.skillCooldownText.destroy();
+    }
+    super.destroy(fromScene);
+  }
 
   // Set of physically pressed keys (immune to Japanese IME 229 keyCode issue)
   private activeKeys: Set<string> = new Set();
@@ -46,9 +62,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         S: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
         D: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
         SPACE: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
-        J: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J)
+        J: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J),
+        F: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F)
       };
     }
+
+    this.skillCooldownText = scene.add.text(x, y - 20, 'Skill: Ready', {
+      fontSize: '8px',
+      color: '#00ff00',
+      backgroundColor: '#000000aa',
+      padding: { x: 2, y: 1 }
+    }).setOrigin(0.5).setDepth(20);
 
     // Direct DOM key tracking by physical code (e.code is always 'KeyW', 'KeyA', etc. even with IME active)
     const onKeyDown = (e: KeyboardEvent) => {
@@ -197,6 +221,103 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (attackPressed) {
       this.tryAttack(time);
     }
+
+    // Skill input
+    const skillPressed =
+      this.activeKeys.has('KeyF') ||
+      this.activeKeys.has('f') ||
+      Phaser.Input.Keyboard.JustDown(this.wasdKeys?.F);
+      
+    if (skillPressed) {
+      this.trySkill(time);
+    }
+
+    // Update skill text UI
+    if (this.skillCooldownText) {
+      this.skillCooldownText.setPosition(this.x, this.y - 20);
+      const skillDef = CLASS_SKILLS[this.gameState.player.classType];
+      if (skillDef) {
+        const timeSinceSkill = time - this.lastSkillTime;
+        if (timeSinceSkill < skillDef.cooldown) {
+          const remaining = ((skillDef.cooldown - timeSinceSkill) / 1000).toFixed(1);
+          this.skillCooldownText.setText(`CD: ${remaining}s`);
+          this.skillCooldownText.setColor('#ffaaaa');
+        } else {
+          this.skillCooldownText.setText(skillDef.name);
+          this.skillCooldownText.setColor('#aaffaa');
+        }
+      } else {
+        this.skillCooldownText.setVisible(false);
+      }
+    }
+  }
+
+  public trySkill(time: number): void {
+    const p = this.gameState.player;
+    const skillDef = CLASS_SKILLS[p.classType];
+    if (!skillDef) return;
+
+    if (time - this.lastSkillTime < skillDef.cooldown) return;
+    if (p.mp < skillDef.costMp) return; // not enough mp
+
+    p.mp -= skillDef.costMp;
+    this.lastSkillTime = time;
+
+    // Apply effect
+    if (p.classType === 'warrior') {
+      this.bonusAttack = 10;
+      this.bonusDefense = 10;
+      this.scene.cameras.main.flash(200, 255, 0, 0); // Red flash
+      
+      this.scene.time.delayedCall(8000, () => {
+        this.bonusAttack = 0;
+        this.bonusDefense = 0;
+      });
+    } else if (p.classType === 'thief') {
+      this.activeAttackMultiplier = 2;
+      this.scene.cameras.main.flash(200, 100, 100, 100);
+    } else if (p.classType === 'paladin') {
+      this.scene.cameras.main.flash(200, 255, 255, 0);
+      const healAmount = Math.floor(p.maxHp * 0.3);
+      p.hp = Math.min(p.maxHp, p.hp + healAmount);
+      // We also need to heal companions, but we can do that by emitting an event or accessing GameState.
+      // GameState doesn't auto-update companions in real scene unless we modify GameState and scene listens, 
+      // but we can just heal the GameState data and let scene update.
+      this.gameState.recruitedCompanions.forEach(c => {
+        c.hp = Math.min(c.maxHp, c.hp + Math.floor(c.maxHp * 0.3));
+      });
+    } else if (p.classType === 'mage') {
+      let lungeX = 0;
+      let lungeY = 0;
+      const dist = 50;
+      if (this.facing === 'right') lungeX = dist;
+      else if (this.facing === 'left') lungeX = -dist;
+      else if (this.facing === 'down') lungeY = dist;
+      else if (this.facing === 'up') lungeY = -dist;
+
+      const expX = this.x + lungeX;
+      const expY = this.y + lungeY;
+
+      // Create an explosion graphic
+      const circle = this.scene.add.circle(expX, expY, 40, 0xffaa00, 0.6).setDepth(20);
+      this.scene.tweens.add({
+        targets: circle,
+        scale: { from: 0.5, to: 1.5 },
+        alpha: { from: 0.6, to: 0 },
+        duration: 300,
+        onComplete: () => circle.destroy()
+      });
+
+      this.scene.events.emit('player-melee-attack', {
+        x: expX,
+        y: expY,
+        range: 50,
+        damage: (p.attack + this.bonusAttack) * this.activeAttackMultiplier * 2,
+        source: 'player'
+      });
+      // reset multiplier if used
+      this.activeAttackMultiplier = 1;
+    }
   }
 
   public tryAttack(time: number): void {
@@ -286,7 +407,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         x: this.x,
         y: this.y,
         facing: this.facing,
-        damage: this.gameState.player.attack,
+        damage: (this.gameState.player.attack + this.bonusAttack) * this.activeAttackMultiplier,
         source: 'player'
       });
     } else {
@@ -295,11 +416,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         y: attackY,
         angle,
         facing: this.facing,
-        damage: this.gameState.player.attack,
+        damage: (this.gameState.player.attack + this.bonusAttack) * this.activeAttackMultiplier,
         range: attackType === 'paladin' ? 44 : (attackType === 'thief' ? 32 : 40),
         classType: attackType
       });
     }
+    this.activeAttackMultiplier = 1;
 
     this.scene.cameras.main.shake(60, 0.002);
   }
@@ -307,7 +429,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public takeDamage(amount: number): void {
     if (this.isInvulnerable || this.gameState.player.hp <= 0) return;
 
-    const effectiveDamage = Math.max(1, Math.round(amount - this.gameState.player.defense / 2));
+    const effectiveDefense = this.gameState.player.defense + this.bonusDefense;
+    const effectiveDamage = Math.max(1, Math.round(amount - effectiveDefense / 2));
     this.gameState.player.hp = Math.max(0, this.gameState.player.hp - effectiveDamage);
 
     this.setTint(0xff3333);

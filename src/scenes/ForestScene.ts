@@ -455,7 +455,7 @@ export class ForestScene extends Phaser.Scene {
       `Lv.${p.level} ${p.name} | HP: ${p.hp}/${p.maxHp} | MP: ${p.mp}/${p.maxMp}\n` +
       `EXP: ${p.exp}/${p.maxExp} | 所持金: ${p.gold} G\n` +
       `所持薬草数: ${this.gameState.getItemCount('herb_small') + this.gameState.getItemCount('herb_antidote') + this.gameState.getItemCount('herb_high')}株\n` +
-      `操作: [SPACE/J] 攻撃 | [E] 採取`
+      `操作: [SPACE/J] 攻撃 | [F] スキル | [E] 採取`
     );
   }
 }
