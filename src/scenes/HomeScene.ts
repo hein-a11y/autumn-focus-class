@@ -84,10 +84,29 @@ export class HomeScene extends Phaser.Scene {
     // Rug in the middle
     this.add.rectangle(200, 200, 100, 80, 0x8d6e63).setDepth(1);
 
-    // The Bed (using our newly generated texture atlas!)
-    const bed = this.add.image(200, 100, 'furniture_pack', 'furniture_14').setDepth(2);
+    // The Bed (Blue)
+    const bed = this.add.image(300, 100, 'furniture_pack', 'furniture_26').setDepth(2);
     this.physics.add.existing(bed, true);
     this.physics.add.collider(this.player, bed);
+
+    // Black Stove / Fireplace
+    const stove = this.add.image(200, 50, 'furniture_pack', 'furniture_19').setDepth(2);
+    this.physics.add.existing(stove, true);
+    this.physics.add.collider(this.player, stove);
+
+    // Chair
+    const chair = this.add.image(150, 150, 'furniture_pack', 'furniture_36').setDepth(2);
+    this.physics.add.existing(chair, true);
+    this.physics.add.collider(this.player, chair);
+
+    // Barrels
+    const barrel1 = this.add.image(50, 50, 'furniture_pack', 'furniture_15').setDepth(2);
+    this.physics.add.existing(barrel1, true);
+    this.physics.add.collider(this.player, barrel1);
+
+    const barrel2 = this.add.image(50, 80, 'furniture_pack', 'furniture_15').setDepth(2);
+    this.physics.add.existing(barrel2, true);
+    this.physics.add.collider(this.player, barrel2);
 
     // Exit Door / Mat
     const door = this.add.rectangle(200, 370, 40, 20, 0x4e342e).setDepth(1);
@@ -123,10 +142,10 @@ export class HomeScene extends Phaser.Scene {
     const px = this.player.x;
     const py = this.player.y;
 
-    // Bed interaction range
-    if (Phaser.Math.Distance.Between(px, py, 200, 100) < 50) {
+    // Bed interaction range (bed is at 300, 100)
+    if (Phaser.Math.Distance.Between(px, py, 300, 100) < 50) {
       this.interactPromptText.setText('[E] ベッドで休む (全回復&セーブ)');
-      this.interactPromptText.setPosition(200, 150);
+      this.interactPromptText.setPosition(300, 150);
       this.interactPromptText.setVisible(true);
       return;
     }
@@ -138,7 +157,7 @@ export class HomeScene extends Phaser.Scene {
     const px = this.player.x;
     const py = this.player.y;
 
-    if (Phaser.Math.Distance.Between(px, py, 200, 100) < 50) {
+    if (Phaser.Math.Distance.Between(px, py, 300, 100) < 50) {
       this.openBedRestModal();
     }
   }

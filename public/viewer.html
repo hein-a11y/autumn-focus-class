@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atlas Viewer</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #333; color: white; font-family: sans-serif; }
+        #game-container { display: flex; justify-content: center; align-items: center; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    <script>
+        const config = {
+            type: Phaser.AUTO,
+            width: 1000,
+            height: 800,
+            parent: 'game-container',
+            scene: {
+                preload: preload,
+                create: create
+            }
+        };
+
+        const game = new Phaser.Game(config);
+
+        function preload() {
+            this.load.atlas('furniture_pack', 'assets/furniture/furniture.png', 'assets/furniture/furniture.json');
+        }
+
+        function create() {
+            let x = 50;
+            let y = 50;
+            let maxHeight = 0;
+
+            for (let i = 0; i <= 42; i++) {
+                const frameName = `furniture_${i}`;
+                const img = this.add.image(x, y, 'furniture_pack', frameName);
+                
+                this.add.text(x, y + img.height/2 + 10, `${i}`, { fontSize: '12px', fill: '#fff' }).setOrigin(0.5);
+
+                x += img.width + 40;
+                maxHeight = Math.max(maxHeight, img.height);
+
+                if (x > 900) {
+                    x = 50;
+                    y += maxHeight + 40;
+                    maxHeight = 0;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
+
