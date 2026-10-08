@@ -219,8 +219,12 @@ export class DungeonScene extends Phaser.Scene {
       themeName = '廃鉱山 (B3-B4)';
       monsterTypes = ['skeleton', 'cave_spider'];
       oreType = 'ore_iron';
-    } else if (this.currentFloor <= 6) {
-      themeName = '深層大洞窟 (B5-B6)';
+    } else if (this.currentFloor === 5) {
+      themeName = 'クモの巣 (B5 BOSS)';
+      monsterTypes = ['giant_spider'];
+      oreType = 'ore_silver';
+    } else if (this.currentFloor === 6) {
+      themeName = '深層大洞窟 (B6)';
       monsterTypes = ['stone_golem', 'dark_bat'];
       oreType = 'ore_silver';
     } else if (this.currentFloor <= 8) {
@@ -233,7 +237,7 @@ export class DungeonScene extends Phaser.Scene {
       oreType = 'ore_mithril';
     } else {
       themeName = '奈落のコア (B10 BOSS)';
-      monsterTypes = ['shadow_knight', 'giant_spider'];
+      monsterTypes = ['demon_lord'];
       oreType = 'ore_adamantite';
     }
 
@@ -242,7 +246,7 @@ export class DungeonScene extends Phaser.Scene {
     }
 
     // Spawn Ore Nodes
-    const oreCount = 6;
+    const oreCount = (this.currentFloor === 5 || this.currentFloor === 10) ? 2 : 6;
     for (let i = 0; i < oreCount; i++) {
       const ox = Phaser.Math.Between(180, 850);
       const oy = Phaser.Math.Between(100, 700);
@@ -257,7 +261,7 @@ export class DungeonScene extends Phaser.Scene {
     }
 
     // Spawn Monsters
-    const monsterCount = this.currentFloor === 10 ? 4 : 8;
+    const monsterCount = (this.currentFloor === 5 || this.currentFloor === 10) ? 1 : 8;
     for (let i = 0; i < monsterCount; i++) {
       const type = monsterTypes[i % monsterTypes.length];
       const mDef = MONSTER_DEFINITIONS[type];

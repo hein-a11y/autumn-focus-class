@@ -48,17 +48,54 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
     const aggroRange = this.monsterDef.isBoss ? 260 : 140;
 
     if (this.isAggroed || dist <= aggroRange) {
-      // Chase target
       const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
-      this.setVelocity(
-        Math.cos(angle) * this.monsterDef.speed,
-        Math.sin(angle) * this.monsterDef.speed
-      );
+      
+      if (this.monsterDef.isBoss) {
+        // Boss behavior: maintain distance and shoot
+        const optimalDistance = 140;
+        
+        if (dist > optimalDistance) {
+          this.setVelocity(
+            Math.cos(angle) * this.monsterDef.speed,
+            Math.sin(angle) * this.monsterDef.speed
+          );
+        } else if (dist < optimalDistance - 30) {
+          this.setVelocity(
+            -Math.cos(angle) * this.monsterDef.speed,
+            -Math.sin(angle) * this.monsterDef.speed
+          );
+        } else {
+          this.setVelocity(0, 0);
+        }
 
-      // Attack if in contact range
-      if (dist < 32 && time - this.lastAttackTime > 800) {
-        this.lastAttackTime = time;
-        target.takeDamage(this.monsterDef.attack);
+        // Boss ranged attack
+        if (time - this.lastAttackTime > 1500) {
+          this.lastAttackTime = time;
+          const orb = this.scene.physics.add.sprite(this.x, this.y, 'effect_magic_orb').setDepth(20).setTint(0xff55ff);
+          const orbSpeed = 220;
+          orb.setVelocity(Math.cos(angle) * orbSpeed, Math.sin(angle) * orbSpeed);
+          
+          this.scene.physics.add.overlap(orb, target as unknown as Phaser.Physics.Arcade.Sprite, (o, t) => {
+            target.takeDamage(this.monsterDef.attack);
+            orb.destroy();
+          });
+          
+          this.scene.time.delayedCall(2000, () => {
+            if (orb.active) orb.destroy();
+          });
+        }
+      } else {
+        // Normal monster behavior: chase and melee
+        this.setVelocity(
+          Math.cos(angle) * this.monsterDef.speed,
+          Math.sin(angle) * this.monsterDef.speed
+        );
+
+        // Attack if in contact range
+        if (dist < 32 && time - this.lastAttackTime > 800) {
+          this.lastAttackTime = time;
+          target.takeDamage(this.monsterDef.attack);
+        }
       }
     } else {
       this.handlePatrol(time);
